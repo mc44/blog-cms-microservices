@@ -1,0 +1,19 @@
+---
+description: Blog CMS monorepo context
+alwaysApply: true
+---
+
+# Project contract
+
+Treat [README.md](mdc:README.md) and [SYSTEM_DESIGN.md](mdc:SYSTEM_DESIGN.md) as architecture sources. Milestones: [docs/ROADMAP.md](mdc:docs/ROADMAP.md).
+
+## Repos
+
+- **auth-service** — sibling repo (`../auth-service`), not inside blog-cms.
+- **blog-cms** — gateway, blog, media, audit, frontend, deploy.
+
+## Boundaries
+
+- Each service has its **own MongoDB logical database** (`blog`, `audit`, auth in auth repo).
+- **Phase 1 VPS:** Mongo + apps; no Redpanda unless `KAFKA_ENABLED=true`.
+- Auth integrates via REST/JWT only; no Kafka in auth-service.

@@ -1,0 +1,60 @@
+# Blog-cms data layer only (database `blog`). Auth has its own Mongo in the auth-service repo.
+name: cms-data
+
+networks:
+  cms-internal:
+    name: cms-internal
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - cms-mongo-data:/data/db
+    networks:
+      - cms-internal
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    networks:
+      - cms-internal
+    profiles:
+      - redis
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.4
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - "512M"
+      - --reserve-memory
+      - "0M"
+      - --node-id
+      - "0"
+      - --kafka-addr
+      - internal://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092
+    mem_limit: 512m
+    networks:
+      - cms-internal
+    profiles:
+      - kafka
+
+volumes:
+  cms-mongo-data:

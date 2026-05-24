@@ -1,0 +1,9 @@
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/config/CloudinaryConfig.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/web/CorrelationIdFilter.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/api/dto/ErrorResponse.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/MediaServiceApplication.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/api/MediaController.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/service/MediaException.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/service/CloudinaryMediaService.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/api/MediaExceptionHandler.java
+/Users/marcfajardo/operations-workflow/media-service/src/main/java/com/operations/media/api/dto/MediaAssetResponse.java

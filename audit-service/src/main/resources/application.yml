@@ -1,0 +1,36 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: audit-service
+  config:
+    import: optional:file:./config/localhost.properties
+  data:
+    mongodb:
+      uri: ${AUDIT_MONGODB_URI:mongodb://mongo:27017}
+      database: ${AUDIT_MONGODB_DATABASE:audit}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:redpanda:9092}
+    consumer:
+      group-id: audit-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+audit:
+  default-tenant-id: ${AUDIT_DEFAULT_TENANT_ID:blog-cms}
+
+kafka:
+  enabled: ${KAFKA_ENABLED:false}
+  topic: ${KAFKA_TOPIC_BLOG_EVENTS:blog.domain.events}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{correlationId:-}]"

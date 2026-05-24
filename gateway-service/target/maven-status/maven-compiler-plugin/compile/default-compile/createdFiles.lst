@@ -1,0 +1,7 @@
+com/operations/gateway/filter/UserIdForwardingGatewayFilter.class
+com/operations/gateway/GatewayApplication.class
+com/operations/gateway/web/HelloController.class
+com/operations/gateway/filter/TenantIdForwardingGatewayFilter.class
+com/operations/gateway/filter/CorrelationIdGatewayFilter.class
+com/operations/gateway/config/SecurityConfig.class
+com/operations/gateway/web/ProtectedController.class

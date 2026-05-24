@@ -1,0 +1,12 @@
+---
+description: Frontend conventions once Next.js is bootstrapped
+globs: "frontend/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Next.js frontend
+
+- Prefer the **Next.js App Router**, TypeScript `strict`, Tailwind + shadcn/ui per system design.
+- Server state lives in **TanStack Query**; reserve **Zustand** for UI-only state (modals, filters, etc.).
+- Keep `NEXT_PUBLIC_*` env exposure minimal—API base URLs and feature flags only.
+- API calls should target the Spring Cloud Gateway base URL (env-configured) instead of bespoke service ports.

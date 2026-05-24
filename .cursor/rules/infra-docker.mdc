@@ -1,0 +1,15 @@
+---
+description: Docker / Compose conventions for infra and service images
+globs:
+  - "**/Dockerfile*"
+  - "infrastructure/**/*.yml"
+  - "infrastructure/**/*.yaml"
+alwaysApply: false
+---
+
+# Infra hygiene
+
+- **One image per service**; avoid fat multi-app containers.
+- Compose defaults should honour **Phase 1 minimal stack** (`infrastructure/docker/docker-compose.yml`): MongoDB + Redis + gateway—use profiles/overrides for Kafka/Rabbit/obs stacks.
+- Never bake literal secrets inside images—load via Compose env vars, swarm/k8s secrets, or VPS secret manager equivalents.
+- When editing Compose, document how profiles map to roadmap phases (`docs/ROADMAP.md`) in the PR description/README delta when behaviour changes materially.

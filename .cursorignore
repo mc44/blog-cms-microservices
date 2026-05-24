@@ -1,0 +1,32 @@
+# Dependencies & package caches
+**/node_modules/**
+**/.pnpm-store/**
+
+# Frontend build outputs
+**/.next/**
+**/out/**
+**/dist/**
+
+# JVM / Gradle / Maven
+**/target/**
+**/build/
+**/.gradle/**
+
+# IDE & OS
+.idea/
+*.swp
+.DS_Store
+
+# Logs & local env
+**/*.log
+.env
+.env.*
+!.env.example
+
+# Test / coverage artifacts
+**/coverage/**
+**/.nyc_output/**
+
+# Large local Docker data dirs if kept under repo
+**/docker-data/**
+

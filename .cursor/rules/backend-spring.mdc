@@ -1,0 +1,13 @@
+---
+description: Spring Boot backend conventions — gateway + domain microservices
+globs: "**/*.java"
+alwaysApply: false
+---
+
+# Backend guardrails
+
+- Target **Spring Boot 3 / Java 21** baseline and align BOMs (`spring-boot-starter-parent` + compatible Spring Cloud where applicable).
+- Propagate/logging: prefer structured logs and propagate correlation IDs echoed from inbound headers (Gateway → downstream services).
+- MongoDB identifiers: settle on **`String`** IDs backed by BSON `ObjectId` or UUID—and stay consistent inside one service boundary.
+- Controllers/handlers exposing REST should remain **slice-focused** (`@Validated`/`jakarta.validation` on DTO ingress, explicit error payloads).
+- For operations that RabbitMQ retries, keep handlers **idempotent** (deterministic IDs, UPSERT semantics, replay guards).

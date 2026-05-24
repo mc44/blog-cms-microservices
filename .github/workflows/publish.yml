@@ -1,0 +1,97 @@
+name: Publish images
+
+on:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publish-cms:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: gateway-service
+            image: gateway-service
+          - service: blog-service
+            image: blog-service
+          - service: media-service
+            image: media-service
+          - service: audit-service
+            image: audit-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: mvn -B verify -DskipTests -f ${{ matrix.service }}/pom.xml
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
+
+  publish-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_GATEWAY_URL: http://localhost:8080
+          NEXT_PUBLIC_TENANT_ID: blog-cms
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          push: true
+          build-args: |
+            NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080
+            NEXT_PUBLIC_TENANT_ID=blog-cms
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/blog-cms-frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/blog-cms-frontend:latest
+
+  deploy-vps:
+    needs: [publish-cms, publish-frontend]
+    runs-on: ubuntu-latest
+    if: vars.VPS_DEPLOY_ENABLED == 'true'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/blog-cms/deploy
+            export GATEWAY_IMAGE_TAG=${{ github.sha }}
+            export BLOG_IMAGE_TAG=${{ github.sha }}
+            export MEDIA_IMAGE_TAG=${{ github.sha }}
+            export AUDIT_IMAGE_TAG=${{ github.sha }}
+            export FRONTEND_IMAGE_TAG=${{ github.sha }}
+            ./scripts/deploy.sh

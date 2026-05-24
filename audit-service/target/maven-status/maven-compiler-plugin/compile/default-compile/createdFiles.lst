@@ -1,0 +1,11 @@
+com/operations/audit/api/dto/CreateAuditEventRequest.class
+com/operations/audit/kafka/BlogDomainEventConsumer.class
+com/operations/audit/api/AuditController.class
+com/operations/audit/api/AuditExceptionHandler.class
+com/operations/audit/service/AuditException.class
+com/operations/audit/model/AuditEventDocument.class
+com/operations/audit/repository/AuditEventRepository.class
+com/operations/audit/AuditServiceApplication.class
+com/operations/audit/service/AuditEventService.class
+com/operations/audit/api/dto/AuditEventResponse.class
+com/operations/audit/config/KafkaConsumerConfig.class

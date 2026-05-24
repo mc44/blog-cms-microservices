@@ -1,0 +1,106 @@
+# Blog-cms applications. Auth runs from sibling ../auth-service repo.
+name: cms-apps
+
+networks:
+  cms-internal:
+    external: true
+    name: cms-internal
+  auth-platform:
+    external: true
+    name: auth-platform
+
+services:
+  gateway:
+    image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/gateway-service:${GATEWAY_IMAGE_TAG:-latest}}
+    build:
+      context: ../gateway-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
+      BLOG_SERVICE_URL: http://blog-service:8082
+      MEDIA_SERVICE_URL: http://media-service:8083
+      AUDIT_SERVICE_URL: http://audit-service:8084
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-env-please-change-me-in-env}
+      BLOG_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+    depends_on:
+      - blog-service
+      - media-service
+      - audit-service
+    networks:
+      - cms-internal
+      - auth-platform
+
+  blog-service:
+    image: ${BLOG_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/blog-service:${BLOG_IMAGE_TAG:-latest}}
+    build:
+      context: ../blog-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      BLOG_MONGODB_URI: mongodb://mongo:27017
+      BLOG_MONGODB_DATABASE: blog
+      BLOG_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+      MEDIA_SERVICE_URL: http://media-service:8083
+      AUDIT_SERVICE_URL: http://audit-service:8084
+      AUDIT_ENABLED: ${AUDIT_ENABLED:-true}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:9092}
+    depends_on:
+      - media-service
+      - audit-service
+    networks:
+      - cms-internal
+
+  media-service:
+    image: ${MEDIA_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/media-service:${MEDIA_IMAGE_TAG:-latest}}
+    build:
+      context: ../media-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+    networks:
+      - cms-internal
+
+  audit-service:
+    image: ${AUDIT_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/audit-service:${AUDIT_IMAGE_TAG:-latest}}
+    build:
+      context: ../audit-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      AUDIT_MONGODB_URI: mongodb://mongo:27017
+      AUDIT_MONGODB_DATABASE: audit
+      AUDIT_DEFAULT_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:9092}
+    networks:
+      - cms-internal
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/blog-cms-frontend:${FRONTEND_IMAGE_TAG:-latest}}
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8080}
+      NEXT_PUBLIC_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+      NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Blog CMS}
+    depends_on:
+      - gateway
+    networks:
+      - cms-internal

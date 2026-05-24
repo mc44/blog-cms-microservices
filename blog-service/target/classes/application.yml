@@ -1,0 +1,40 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: blog-service
+  config:
+    import: optional:file:./config/localhost.properties
+  data:
+    mongodb:
+      uri: ${BLOG_MONGODB_URI:mongodb://mongo:27017}
+      database: ${BLOG_MONGODB_DATABASE:blog}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:redpanda:9092}
+
+blog:
+  tenant-id: ${BLOG_TENANT_ID:blog-cms}
+
+media:
+  service:
+    base-url: ${MEDIA_SERVICE_URL:http://media-service:8083}
+
+audit:
+  enabled: ${AUDIT_ENABLED:true}
+  service:
+    base-url: ${AUDIT_SERVICE_URL:http://audit-service:8084}
+
+kafka:
+  enabled: ${KAFKA_ENABLED:false}
+  topic: ${KAFKA_TOPIC_BLOG_EVENTS:blog.domain.events}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{correlationId:-}]"
