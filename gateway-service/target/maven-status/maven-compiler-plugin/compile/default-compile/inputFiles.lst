@@ -1,7 +1,0 @@
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/filter/CorrelationIdGatewayFilter.java
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/GatewayApplication.java
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/config/SecurityConfig.java
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/filter/UserIdForwardingGatewayFilter.java
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/filter/TenantIdForwardingGatewayFilter.java
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/web/ProtectedController.java
-/Users/marcfajardo/operations-workflow/gateway-service/src/main/java/com/operations/gateway/web/HelloController.java
