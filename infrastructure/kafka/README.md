@@ -1,5 +1,9 @@
-# Kafka / Redpanda (Phase 2+)
+# Kafka / Redpanda
 
-Production profile lives in [`deploy/prereqs/docker-compose.yml`](../../deploy/prereqs/docker-compose.yml) (`--profile kafka`).
+Event streaming for blog domain events. The broker runs as an optional Compose profile; application code uses Spring Kafka against a Kafka-compatible API.
 
-See [docs/kafka.md](../../docs/kafka.md) for enablement and event schema.
+**Broker compose:** [deploy/prereqs/docker-compose.yml](../../deploy/prereqs/docker-compose.yml) (`--profile kafka`)
+
+**Enable and event schema:** [docs/kafka.md](../../docs/kafka.md)
+
+**Helper script:** `deploy/scripts/kafka-up.sh`

@@ -1,78 +1,63 @@
-# Deploy blog-cms on a server
+# Deploy (server)
 
-Run from a **git clone** on the VPS. Application images are **built on the server** with Docker Compose. Auth runs from a **separate** `auth-service` clone — deploy that first.
+Run from a git clone on the host. Images are built on the machine with Docker Compose. **auth-service** is deployed from its own repository first.
+
+For **local testing** with auth and Mongo already running, use the root [README.md](../README.md).
 
 ## Prerequisites
 
-- Docker Engine and Docker Compose v2
-- Auth-service already running (network **`auth-platform`**, port **8081**)
-- Git clone of this repository, e.g. `~/blog-cms` or `~/operations-workflow`
+- Docker Engine and Compose v2
+- **auth-service** running on network `auth-platform` (port **8081** on the host)
+- Git clone of this repository
 
-```bash
-git clone https://github.com/<you>/<blog-cms-repo>.git
-cd <repo>
-```
-
-## Check host ports
-
-Blog-cms uses these **host** ports (auth uses **27017** and **8081** in its own repo — do not overlap):
+## Ports (blog-cms)
 
 | Port | Service |
 |------|---------|
-| 27018 | Blog MongoDB |
-| 6380 | Blog Redis (optional) |
-| 8080 | Gateway |
+| 27018 | MongoDB (`blog` + `audit` databases) |
+| 6380 | Redis (optional profile) |
+| 8080 | gateway |
 | 8082 | blog-service |
 | 8083 | media-service |
 | 8084 | audit-service |
 | 3000 | frontend |
 
+Auth uses **27017** and **8081** in the auth repo — do not bind those on the blog stack.
+
+Check ports before starting:
+
 ```bash
 chmod +x deploy/scripts/check-ports.sh
-
-./deploy/scripts/check-ports.sh prereqs    # before blog Mongo
-./deploy/scripts/check-ports.sh apps       # before gateway stack (also run by deploy.sh)
-./deploy/scripts/check-ports.sh all        # prereqs + apps
+./deploy/scripts/check-ports.sh prereqs   # before Mongo
+./deploy/scripts/check-ports.sh apps      # before applications
+./deploy/scripts/check-ports.sh all
 ```
 
-**Manual check:**
+## Step 1 — Auth-service
 
-```bash
-ss -tlnp | grep -E ':(27018|8080|8082|8083|8084|3000)\b'
-```
+Deploy from the auth-service clone (sibling: `../auth-service/deploy/README.md` or your auth GitHub repo).
 
-If **8081** is in use, that is usually auth-service (expected after Step 1). If deploy fails, something else may be bound to the same port as in the table above — stop it or change the host side in `deploy/prereqs/docker-compose.yml` or `deploy/docker-compose.yml`.
+Copy `AUTH_JWT_SECRET` from auth `deploy/.env` into this repo’s `deploy/.env`.
 
-### Step 1 — Auth-service (separate clone)
-
-Clone and follow **only** the auth-service deploy guide:
-
-**Sibling repo:** `../auth-service/deploy/README.md` (after moving auth out of this tree) or your auth GitHub repo deploy docs.
-
-That starts auth Mongo, then the `auth-service` container.
-
-Copy **`AUTH_JWT_SECRET`** from auth `deploy/.env` — you need the same value here.
-
-Confirm:
+Verify:
 
 ```bash
 curl -s http://127.0.0.1:8081/actuator/health
 ```
 
-### Step 2 — Blog MongoDB (and optional Redis)
+## Step 2 — Blog MongoDB
 
 ```bash
 ./deploy/scripts/check-ports.sh prereqs
-
 cd deploy/prereqs
-docker compose -f docker-compose.yml up -d mongo
+docker compose up -d mongo
 # optional:
-docker compose -f docker-compose.yml --profile redis up -d redis
+docker compose --profile redis up -d redis
 ```
 
-[prereqs/README.md](prereqs/README.md) — blog database only (`blog`), host port **27018**, network **`cms-internal`**.
+Details: [prereqs/README.md](prereqs/README.md).
 
-### Step 3 — Configure and start applications
+## Step 3 — Applications
 
 ```bash
 cd deploy
@@ -82,25 +67,24 @@ chmod 600 .env
 
 | Variable | Purpose |
 |----------|---------|
-| `AUTH_SERVICE_URL` | e.g. `http://auth-service:8081` (gateway must join `auth-platform`) |
-| `AUTH_JWT_SECRET` | **Same** as auth-service `deploy/.env` |
-| `BLOG_TENANT_ID` | Tenant id sent on login and in JWT checks — **must exist in auth** |
+| `AUTH_SERVICE_URL` | Auth container URL on `auth-platform` (e.g. `http://auth-service:8081`) |
+| `AUTH_JWT_SECRET` | Same as auth-service |
+| `BLOG_TENANT_ID` | Tenant used at login; must exist in auth |
+| `NEXT_PUBLIC_GATEWAY_URL` | Public gateway URL for the frontend build |
 
-**Tenant alignment:** `BLOG_TENANT_ID` must match a tenant registered in auth. Easiest path: set auth `AUTH_SEED_TENANT_ID` to the same value (e.g. `blog-cms`) before first auth startup, or use that tenant id when logging in. See auth deploy README — *What `AUTH_SEED_TENANT_ID` is for*.
+`BLOG_TENANT_ID` must match a tenant in auth (align with auth `AUTH_SEED_TENANT_ID` on first boot if you use seeding).
 
 ```bash
 chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-`deploy.sh` runs `docker compose up -d --build` for gateway, blog-service, media-service, and frontend (no registry required).
+Requires networks **`auth-platform`** and **`cms-internal`**.
 
-Requires Docker network **`auth-platform`** (created when auth infrastructure starts).
+## Containers started by deploy.sh
 
-## Containers in this repo
-
-| Service | Port (host) |
-|---------|-------------|
+| Service | Host port |
+|---------|-----------|
 | gateway | 8080 |
 | blog-service | 8082 |
 | media-service | 8083 |
@@ -109,18 +93,18 @@ Requires Docker network **`auth-platform`** (created when auth infrastructure st
 
 ## Architecture
 
-```
-auth-service repo              blog-cms repo (this)
-┌──────────────────┐           ┌───────────────────┐
-│ auth-platform    │           │ cms-internal      │
-│  mongo (auth)    │           │  mongo (blog)     │
-│  auth-service    │◄──────────│  gateway          │
-└──────────────────┘           │  blog, media,     │
-                               │  audit, frontend  │
-                               └───────────────────┘
+```text
+auth-service repo                 blog-cms repo
+┌─────────────────┐              ┌────────────────────┐
+│ auth-platform   │              │ cms-internal       │
+│  mongo (auth)   │              │  mongo (blog)      │
+│  auth :8081     │◄─────────────│  gateway :8080     │
+└─────────────────┘              │  blog, media,      │
+                                 │  audit, frontend   │
+                                 └────────────────────┘
 ```
 
-## Redeploy after `git pull`
+## Redeploy after git pull
 
 ```bash
 cd deploy
@@ -128,38 +112,22 @@ git pull
 ./scripts/deploy.sh
 ```
 
-Prereq Mongo is not rebuilt unless you change `deploy/prereqs`.
+Prereq Mongo is unchanged unless `deploy/prereqs` was modified.
 
-## Gateway ↔ auth
+## Gateway and auth integration
 
-[../auth-service/docs/GATEWAY_INTEGRATION.md](../auth-service/docs/GATEWAY_INTEGRATION.md)
-
-## Local all-in-one (monorepo dev)
-
-```bash
-docker compose -f infrastructure/docker/docker-compose.yml up --build
-```
-
-Single-machine development only; production should use the step order above.
+Sibling doc: `../auth-service/docs/GATEWAY_INTEGRATION.md`  
+Route map: [gateway-service/README.md](../gateway-service/README.md)
 
 ## Kafka / Redpanda (optional)
 
 ```bash
 cd deploy/prereqs
-docker compose -f docker-compose.yml --profile kafka up -d redpanda
+docker compose --profile kafka up -d redpanda
 ```
 
-Set `KAFKA_ENABLED=true` in `deploy/.env` and redeploy apps. See [docs/kafka.md](../docs/kafka.md).
+Set `KAFKA_ENABLED=true` in `deploy/.env`, then rerun `./scripts/deploy.sh`. See [docs/kafka.md](../docs/kafka.md).
 
----
+## CI/CD (images)
 
-## Pending: CI/CD (GitHub Actions + GHCR)
-
-Not required for clone-and-build on the VPS. Planned later:
-
-1. **GitHub Actions** on `main`: build gateway, blog-service, media-service, frontend; push to **GHCR** with tags `:<git-sha>` and optionally `:latest`.
-2. **Optional VPS job**: SSH, set `*_IMAGE_TAG` in `deploy/.env`, `docker compose pull` + `up -d`.
-3. **Gate deploy** with a repo variable (e.g. `VPS_DEPLOY_ENABLED`) so public repos do not auto-deploy on every push until you opt in.
-4. **Auth images** deploy from the **auth-service** repo workflow, not this repo.
-
-Workflow stub: [.github/workflows/publish.yml](../.github/workflows/publish.yml) (build/push today; optional `deploy-vps` job exists but is off unless configured).
+GitHub Actions can build and push images ([.github/workflows/publish.yml](../.github/workflows/publish.yml)). Auth images are built from the auth-service repository, not this one.

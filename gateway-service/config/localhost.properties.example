@@ -2,5 +2,6 @@ server.port=8080
 AUTH_SERVICE_URL=http://localhost:8081
 BLOG_SERVICE_URL=http://localhost:8082
 MEDIA_SERVICE_URL=http://localhost:8083
+AUDIT_SERVICE_URL=http://localhost:8084
 AUTH_JWT_SECRET=dev-only-change-me-please-use-long-secret
 BLOG_TENANT_ID=blog-cms
