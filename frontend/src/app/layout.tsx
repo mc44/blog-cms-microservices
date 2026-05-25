@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
+import { League_Spartan } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { siteDescription, siteName } from "@/lib/site";
 import "./globals.css";
 
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Blog CMS";
+const leagueSpartan = League_Spartan({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: siteName,
-  description: "Microservice blog CMS — portfolio project",
+  description: siteDescription,
 };
 
 export default function RootLayout({
@@ -17,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>
+      <body className={`${leagueSpartan.variable} font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -26,7 +32,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SiteHeader />
-          <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>
+          <main className="mx-auto min-h-[calc(100vh-12rem)] max-w-6xl px-4 py-10">
+            {children}
+          </main>
+          <SiteFooter />
         </ThemeProvider>
       </body>
     </html>

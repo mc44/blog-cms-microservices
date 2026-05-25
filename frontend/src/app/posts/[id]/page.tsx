@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPost } from "@/lib/api";
+import {
+  formatAuthorLabel,
+  formatPostDate,
+  readingTimeMinutes,
+} from "@/lib/format";
 
 export default async function PostDetailPage({
   params,
@@ -17,39 +22,61 @@ export default async function PostDetailPage({
 
   if (post.status !== "PUBLISHED") {
     return (
-      <div className="space-y-4">
-        <p className="text-muted-foreground">This post is not published.</p>
+      <div className="mx-auto max-w-3xl space-y-4">
+        <p className="text-muted-foreground">This article is not published.</p>
         <Link href="/posts" className="text-sm text-primary hover:underline">
-          Back to posts
+          ← Back to articles
         </Link>
       </div>
     );
   }
 
   const cover = post.mediaRefs?.[0]?.secureUrl;
+  const date = formatPostDate(post.publishedAt ?? post.createdAt);
+  const author = formatAuthorLabel(post.authorId);
+  const readMins = readingTimeMinutes(post.content);
 
   return (
-    <article className="space-y-6">
-      <Link href="/posts" className="text-sm text-muted-foreground hover:text-foreground">
-        ← All posts
+    <article className="mx-auto max-w-3xl space-y-8">
+      <Link
+        href="/posts"
+        className="inline-block text-sm text-muted-foreground hover:text-foreground"
+      >
+        ← All articles
       </Link>
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">{post.title}</h1>
-        <p className="text-sm text-muted-foreground">
-          By {post.authorId} · {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : ""}
-        </p>
+      <header className="space-y-4 border-b border-border pb-8">
+        <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+          {post.title}
+        </h1>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <Link href={`/authors/${post.authorId}`} className="font-medium hover:text-foreground hover:underline">
+            {author}
+          </Link>
+          {date && (
+            <>
+              <span aria-hidden>·</span>
+              <time dateTime={post.publishedAt ?? post.createdAt}>{date}</time>
+            </>
+          )}
+          <span aria-hidden>·</span>
+          <span>{readMins} min read</span>
+        </div>
       </header>
       {cover && (
-        <img src={cover} alt="" className="max-h-80 w-full rounded-lg border border-border object-cover" />
+        <img
+          src={cover}
+          alt=""
+          className="w-full rounded-lg border border-border object-cover"
+        />
       )}
-      <div className="prose prose-neutral dark:prose-invert max-w-none whitespace-pre-wrap">
-        {post.content}
+      <div className="prose prose-lg prose-neutral max-w-none dark:prose-invert prose-p:whitespace-pre-wrap">
+        <p>{post.content}</p>
       </div>
-      <p>
-        <Link href={`/authors/${post.authorId}`} className="text-sm text-primary hover:underline">
-          More by this author
+      <footer className="border-t border-border pt-8">
+        <Link href={`/authors/${post.authorId}`} className="text-sm font-medium text-primary hover:underline">
+          More by {author} →
         </Link>
-      </p>
+      </footer>
     </article>
   );
 }

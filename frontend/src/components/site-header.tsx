@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SiteBrandTitle } from "@/components/site-brand-title";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { clearAccessToken, getAccessToken } from "@/lib/auth";
-
-const siteName = process.env.NEXT_PUBLIC_SITE_NAME ?? "Blog CMS";
 
 export function SiteHeader() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -21,14 +20,17 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="border-b border-border bg-card/80 backdrop-blur">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-foreground">
-          {siteName}
+    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
+        <Link href="/" className="text-foreground hover:opacity-90">
+          <SiteBrandTitle />
         </Link>
-        <nav className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+        <nav className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground">
+            Home
+          </Link>
           <Link href="/posts" className="hover:text-foreground">
-            Posts
+            Articles
           </Link>
           {loggedIn && (
             <>

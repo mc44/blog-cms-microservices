@@ -1,42 +1,36 @@
-import Link from "next/link";
+import { PostCard } from "@/components/post-card";
 import { listPosts } from "@/lib/api";
+import { sortPostsByPublished } from "@/lib/format";
 
 export default async function PostsPage() {
   let posts: Awaited<ReturnType<typeof listPosts>> = [];
   let error: string | null = null;
   try {
-    posts = await listPosts({ status: "PUBLISHED" });
+    const raw = await listPosts({ status: "PUBLISHED" });
+    posts = sortPostsByPublished(raw);
   } catch {
     error = "Could not reach the gateway. Start the stack and try again.";
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Published posts</h1>
-        <Link
-          href="/posts/new"
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          New post
-        </Link>
-      </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-        {posts.length === 0 && !error && (
-          <li className="px-4 py-6 text-sm text-muted-foreground">No published posts yet.</li>
-        )}
-        {posts.map((post) => (
-          <li key={post.id} className="px-4 py-4">
-            <Link href={`/posts/${post.id}`} className="font-medium hover:underline">
-              {post.title}
-            </Link>
-            <p className="text-xs text-muted-foreground">
-              {post.slug} · author {post.authorId}
-            </p>
-          </li>
-        ))}
-      </ul>
+    <div className="space-y-10">
+      <header className="mx-auto max-w-2xl space-y-2 text-center">
+        <h1 className="text-4xl font-bold tracking-tight">Articles</h1>
+        <p className="text-muted-foreground">Published posts from this site.</p>
+      </header>
+      {error && <p className="text-center text-sm text-destructive">{error}</p>}
+      {!error && posts.length === 0 && (
+        <p className="rounded-lg border border-dashed border-border bg-card px-6 py-12 text-center text-muted-foreground">
+          No published articles yet.
+        </p>
+      )}
+      {posts.length > 0 && (
+        <div className="grid gap-8 md:grid-cols-2">
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

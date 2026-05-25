@@ -1,58 +1,63 @@
-# frontend
+# Frontend
 
-Next.js application for the public blog and authenticated editor. All API calls go to the **gateway** — never directly to blog, media, or auth ports.
+Next.js blog UI. All API traffic goes through the gateway.
 
 ## Prerequisites
 
-- Gateway running at `http://localhost:8080`
-- auth-service running (login proxied as `/auth/login`)
-- Blog stack healthy (`/actuator/health` on gateway)
+- Gateway at `http://localhost:8080`
+- auth-service running (login via `/auth/login`)
 
-## Environment
+## Branding (public template)
+
+This frontend is meant to be **forked and rebranded via environment variables**. Avoid editing component copy for your site name, tagline, or links—set env vars instead (or change fallbacks in [`src/lib/site.ts`](src/lib/site.ts)).
+
+| Variable | Template fallback (no env) | mfajardo example (see `deploy/.env.example`) |
+|----------|---------------------------|-----------------------------------------------|
+| `NEXT_PUBLIC_SITE_NAME` | `blog` | `blog` |
+| `NEXT_PUBLIC_SITE_BYLINE` | (hidden) | `by mfajardo` |
+| `NEXT_PUBLIC_SITE_TAGLINE` | Generic template sentence | Multi-topic incl. software dev |
+| `NEXT_PUBLIC_SITE_DESCRIPTION` | Same as tagline | Optional SEO override |
+| `NEXT_PUBLIC_HOME_TOPICS` | `Writing,Notes` | `Software,Productivity,Psychology,Building,Habits` |
+| `NEXT_PUBLIC_AUTHOR_LABEL` | Shortened user id | `Marc Fajardo` |
+| `NEXT_PUBLIC_MFAJARDO_URL` | — | `https://mfajardo.com` |
+| `NEXT_PUBLIC_WEEKLY_URL` | — | `https://weekly.mfajardo.com` |
+| `NEXT_PUBLIC_FOCUS_URL` | — | `https://focus.mfajardo.com` |
+
+**Where branding appears**
+
+- **Home page only:** hero tagline, topic pills, optional “Also building …” links.
+- **Header and footer (all pages):** site name + byline, footer tagline, optional Elsewhere links.
+- **Articles listing and post pages:** neutral copy (“Articles”, “Published posts from this site.”).
+
+**Disable Elsewhere links:** leave `NEXT_PUBLIC_MFAJARDO_URL`, `WEEKLY_URL`, and `FOCUS_URL` unset or empty.
+
+## API environment
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8080` | API base URL |
-| `NEXT_PUBLIC_SITE_NAME` | `Blog CMS` | Site title in layout |
+| `NEXT_PUBLIC_TENANT_ID` | `blog-cms` | Login tenant |
 
 ## Development
 
 ```bash
 npm install
+cp ../deploy/.env.example ../deploy/.env   # or use frontend .env.local with NEXT_PUBLIC_* vars
 export NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080
 npm run dev
 ```
 
-Open **http://localhost:3000**.
+Open http://localhost:3000.
 
-### Sign-in
+For local dev with full mfajardo branding, copy the branding block from [`deploy/.env.example`](../deploy/.env.example) into `frontend/.env.local` (Next.js loads it automatically).
 
-Use a user that exists in auth-service for your `BLOG_TENANT_ID` (deploy default seed):
+Default seed user (when auth uses defaults): `user@example.com` / `change-me`, tenant `blog-cms`.
 
-| Field | Example |
-|-------|---------|
-| Tenant | `blog-cms` |
-| Email | `user@example.com` |
-| Password | `change-me` |
-
-### Main routes
-
-| Route | Access | Purpose |
-|-------|--------|---------|
-| `/` | Public | Home |
-| `/posts` | Public | Published posts |
-| `/posts/[id]` | Public | Single post |
-| `/authors/[authorId]` | Public | Posts by author |
-| `/login` | Public | Login |
-| `/me/posts` | Auth | Your posts |
-| `/posts/new` | Auth | Create post |
-| `/posts/[id]/edit` | Auth | Edit post |
-
-## Production build
+## Production
 
 ```bash
 npm run build
 npm run start
 ```
 
-In Docker, the image is built by [deploy/scripts/deploy.sh](../deploy/scripts/deploy.sh) and listens on port **3000**.
+Or use the Docker image from [deploy/scripts/deploy.sh](../deploy/scripts/deploy.sh).

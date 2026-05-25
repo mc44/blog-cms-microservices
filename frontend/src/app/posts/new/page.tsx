@@ -15,7 +15,7 @@ export default function NewPostPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">New post</h1>
+      <h1 className="text-3xl font-bold">New post</h1>
       <PostEditor
         initial={{ title: "", content: "", status: "DRAFT", mediaRefs: [] }}
         submitLabel="Save post"
