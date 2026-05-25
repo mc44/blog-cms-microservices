@@ -26,16 +26,14 @@ From your machine:
 ### Step 1: Move to the repository root
 
 ```bash
-cd /Users/marcfajardo/operations-workflow
+cd /path/to/blog-cms-microservices
 ```
 
-### Step 2: (Optional) Create local env file
+### Step 2: Configure secrets (Docker deploy path)
 
-```bash
-cp .env.example .env.local
-```
+For the full blog stack, use `deploy/.env` (copy from `deploy/.env.example`). Do not commit `.env` or `.env.local`.
 
-Note: this is currently optional for Phase 1 startup, but useful as services expand.
+For this learning step (all-in-one compose under `infrastructure/docker/`), defaults in compose are enough unless you override JWT vars via shell or a **local, gitignored** env file.
 
 ### Step 3: Start the Phase 1 stack
 

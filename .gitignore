@@ -13,6 +13,8 @@
 # Environment (keep examples)
 .env
 .env.*
+.env.local
+frontend/.env.local
 !.env.example
 !**/.env.example
 deploy/.env

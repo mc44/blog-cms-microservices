@@ -5,16 +5,16 @@ This is your repeat-use command sheet for local learning and iteration.
 All commands assume repository root:
 
 ```bash
-cd /Users/marcfajardo/operations-workflow
+cd /path/to/blog-cms-microservices
 ```
 
 ## Phase 1 baseline commands
 
-### Optional env file
+### Environment (Docker)
 
-```bash
-cp .env.example .env.local
-```
+Use **`deploy/.env`** for gateway, blog, media, audit, and frontend (`cp deploy/.env.example deploy/.env`). Do not commit root `.env.local` or Atlas credentials.
+
+For `infrastructure/docker` only, optional local overrides: copy [`.env.example`](../.env.example) to a **gitignored** file — never commit it.
 
 ### Start stack
 

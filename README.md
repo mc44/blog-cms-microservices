@@ -4,6 +4,10 @@ Blog CMS is a multi-service application: a Spring Cloud Gateway fronts blog, med
 
 Architecture reference: [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md). Milestones: [docs/ROADMAP.md](./docs/ROADMAP.md).
 
+**Frontend branding** is env-driven (public template). See [frontend/README.md](./frontend/README.md). Example defaults in [`deploy/.env.example`](deploy/.env.example) use the mfajardo.com ecosystem (`blog by mfajardo`).
+
+**Secrets:** use [`deploy/.env`](deploy/.env) only (never commit). If a root `.env.local` was ever committed, rotate credentials per [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Repository layout
 
 | Repository | Contents |
@@ -42,6 +46,8 @@ docker compose up -d mongo
 ```
 
 ### 1. Configure environment
+
+Secrets and app config live in **`deploy/.env`** only (not a root `.env.local`). MongoDB runs in Docker via `deploy/prereqs` — no Atlas URI in this repo.
 
 ```bash
 cd deploy
