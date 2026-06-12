@@ -26,22 +26,26 @@ cp .env.example .env
 | `BLOG_TENANT_ID` | Tenant at login (default `blog-cms`) |
 | `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8080` for local |
 
-Secrets only in `0-deploy/.env` (gitignored). See [docs/SECURITY.md](./docs/SECURITY.md).
+Secrets only in `0-deploy/.env` (gitignored). Quote branding values that contain spaces or `'` (see `0-deploy/.env.example`). See [docs/SECURITY.md](./docs/SECURITY.md).
 
 ## 3. Run
 
-Blog Mongo (once):
+From **repo root** (`blog-cms-microservices/`):
+
+**3a — Blog Mongo (once):**
 
 ```bash
-cd 0-deploy/prereqs && docker compose up -d mongo
+docker compose -f 0-deploy/prereqs/docker-compose.yml up -d mongo
 ```
 
-Start the stack (from repo root):
+**3b — Gateway, blog, media, audit, frontend:**
 
 ```bash
 chmod +x 0-deploy/scripts/deploy.sh 0-deploy/scripts/check-ports.sh
 ./0-deploy/scripts/deploy.sh
 ```
+
+`deploy.sh` only starts application containers. Auth and Mongo are separate prerequisites (§1 and 3a).
 
 Optional hot-reload frontend: [3-frontend/README.md](./3-frontend/README.md).
 
@@ -105,6 +109,10 @@ sequenceDiagram
 ### `auth-platform` network not found
 
 Start auth before `./0-deploy/scripts/deploy.sh` — see [auth-service deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md).
+
+### Port check failed / `check-ports.sh` errors
+
+Run `./0-deploy/scripts/check-ports.sh all` from repo root. It prints which host port maps to which service. If a port is taken by something else, inspect with `ss -tlnp | grep :PORT` or change the **host** side in `0-deploy/docker-compose.yml` (apps) or `0-deploy/prereqs/docker-compose.yml` (mongo). Update `NEXT_PUBLIC_GATEWAY_URL` if you change gateway's host port. Frontend host port `3000` is in compose; container `PORT` is in `3-frontend/Dockerfile`.
 
 ### What must `BLOG_TENANT_ID` match?
 

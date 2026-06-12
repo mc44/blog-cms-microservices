@@ -3,6 +3,9 @@ set -euo pipefail
 
 die() { echo "check-ports: $*" >&2; exit 1; }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 port_in_use() {
   local port=$1
   if command -v ss >/dev/null 2>&1; then
@@ -33,6 +36,40 @@ expected_container() {
     || [[ "$name" == cms-apps-media-service-* ]] \
     || [[ "$name" == cms-apps-audit-service-* ]] \
     || [[ "$name" == cms-apps-frontend-* ]]
+}
+
+print_port_map() {
+  cat <<EOF
+Port map (host port → service → change host binding in):
+  27018  mongo (blog+audit)     $DEPLOY_ROOT/prereqs/docker-compose.yml
+  6380   redis (optional)       $DEPLOY_ROOT/prereqs/docker-compose.yml
+  8080   gateway                $DEPLOY_ROOT/docker-compose.yml
+  8082   blog-service           $DEPLOY_ROOT/docker-compose.yml
+  8083   media-service          $DEPLOY_ROOT/docker-compose.yml
+  8084   audit-service          $DEPLOY_ROOT/docker-compose.yml
+  3000   frontend               $DEPLOY_ROOT/docker-compose.yml + 3-frontend/Dockerfile (PORT)
+Reserved by auth-service (do not bind here): 8081, 27017
+If you change gateway host port, update NEXT_PUBLIC_GATEWAY_URL in 0-deploy/.env
+EOF
+}
+
+print_conflict_help() {
+  cat <<EOF
+
+Resolve port conflicts:
+  1. Inspect what is listening (replace PORT):
+       ss -tlnp | grep :PORT
+       sudo lsof -nP -iTCP:PORT -sTCP:LISTEN
+  2. Stop the other process/container, OR change the HOST port (left side of "HOST:CONTAINER")
+     in the compose file listed above. Example: "8080:8080" → "18080:8080"
+     - Apps: $DEPLOY_ROOT/docker-compose.yml
+     - Mongo/redis: $DEPLOY_ROOT/prereqs/docker-compose.yml
+     Container listen ports (right side) live in each service Dockerfile EXPOSE and
+     Spring application.yml (frontend: 3-frontend/Dockerfile ENV PORT, default 3000).
+  3. Re-run: $SCRIPT_DIR/check-ports.sh all
+
+Auth uses 8081 and 27017 — keep those free for auth-service, not this stack.
+EOF
 }
 
 check_one() {
@@ -81,12 +118,14 @@ case "$MODE" in
 esac
 
 echo "Checking host ports: ${PORTS[*]}"
+print_port_map
+echo
 failed=0
 for p in "${PORTS[@]}"; do
   check_one "$p" || failed=1
 done
 
 if [[ "$failed" -ne 0 ]]; then
-  echo
-  die "Resolve port conflicts before continuing. Auth uses 8081 and 27017 from the auth-service repo — do not collide with this stack."
+  print_conflict_help
+  die "Port check failed — fix conflicts before deploy."
 fi

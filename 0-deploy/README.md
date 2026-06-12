@@ -27,6 +27,8 @@ chmod 600 .env
 
 Copy `AUTH_JWT_SECRET` from your auth server's env into this file.
 
+**`.env` syntax:** Quote values with spaces or apostrophes (e.g. `NEXT_PUBLIC_SITE_BYLINE="by mfajardo"`). Unquoted values break `deploy.sh` when it loads the file.
+
 ## 3. Run / Deploy
 
 ### Local
