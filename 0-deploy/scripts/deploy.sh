@@ -37,7 +37,15 @@ fi
 
 "$CHECK_PORTS" apps
 
-echo "Building and starting blog-cms stack..."
-docker compose -f docker-compose.yml up -d --build gateway blog-service media-service audit-service frontend
+SERVICES=(gateway blog-service media-service audit-service frontend)
+
+if [[ "${DEPLOY_BUILD:-false}" == "true" ]]; then
+  echo "Building and starting blog-cms stack..."
+  docker compose -f docker-compose.yml up -d --build "${SERVICES[@]}"
+else
+  echo "Pulling and starting blog-cms stack..."
+  docker compose -f docker-compose.yml pull "${SERVICES[@]}"
+  docker compose -f docker-compose.yml up -d "${SERVICES[@]}"
+fi
 
 echo "Gateway: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8080}"
