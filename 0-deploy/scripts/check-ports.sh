@@ -5,6 +5,28 @@ die() { echo "check-ports: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$DEPLOY_ROOT/.." && pwd)"
+
+load_env() {
+  local env_file="$DEPLOY_ROOT/.env"
+  if [[ -f "$env_file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$env_file"
+    set +a
+  fi
+}
+
+load_env
+
+MONGO_HOST_PORT="${MONGO_HOST_PORT:-27018}"
+REDIS_HOST_PORT="${REDIS_HOST_PORT:-6380}"
+GATEWAY_HOST_PORT="${GATEWAY_HOST_PORT:-8080}"
+BLOG_HOST_PORT="${BLOG_HOST_PORT:-8082}"
+MEDIA_HOST_PORT="${MEDIA_HOST_PORT:-8083}"
+AUDIT_HOST_PORT="${AUDIT_HOST_PORT:-8084}"
+FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-3000}"
+FRONTEND_CONTAINER_PORT="${FRONTEND_CONTAINER_PORT:-3000}"
 
 port_in_use() {
   local port=$1
@@ -40,17 +62,94 @@ expected_container() {
 
 print_port_map() {
   cat <<EOF
-Port map (host port → service → change host binding in):
-  27018  mongo (blog+audit)     $DEPLOY_ROOT/prereqs/docker-compose.yml
-  6380   redis (optional)       $DEPLOY_ROOT/prereqs/docker-compose.yml
-  8080   gateway                $DEPLOY_ROOT/docker-compose.yml
-  8082   blog-service           $DEPLOY_ROOT/docker-compose.yml
-  8083   media-service          $DEPLOY_ROOT/docker-compose.yml
-  8084   audit-service          $DEPLOY_ROOT/docker-compose.yml
-  3000   frontend               $DEPLOY_ROOT/docker-compose.yml + 3-frontend/Dockerfile (PORT)
-Reserved by auth-service (do not bind here): 8081, 27017
-If you change gateway host port, update NEXT_PUBLIC_GATEWAY_URL in 0-deploy/.env
+Host ports (from $DEPLOY_ROOT/.env — check-ports uses these values):
+
+  MONGO_HOST_PORT=$MONGO_HOST_PORT
+    Service: mongo (blog + audit data)
+    Update:  $DEPLOY_ROOT/.env
+             $DEPLOY_ROOT/prereqs/docker-compose.yml  →  "\${MONGO_HOST_PORT}:27017"
+    Start:   docker compose --env-file $DEPLOY_ROOT/.env -f $DEPLOY_ROOT/prereqs/docker-compose.yml up -d mongo
+
+  REDIS_HOST_PORT=$REDIS_HOST_PORT (optional profile)
+    Update:  $DEPLOY_ROOT/.env
+             $DEPLOY_ROOT/prereqs/docker-compose.yml  →  "\${REDIS_HOST_PORT}:6379"
+
+  GATEWAY_HOST_PORT=$GATEWAY_HOST_PORT
+    Service: gateway (public API)
+    Update:  $DEPLOY_ROOT/.env
+             $DEPLOY_ROOT/docker-compose.yml  →  "\${GATEWAY_HOST_PORT}:8080"
+             $DEPLOY_ROOT/.env  NEXT_PUBLIC_GATEWAY_URL (public URL must use this host port)
+    Container listen port 8080 only if you change the right side:
+             $REPO_ROOT/1-gateway-service/src/main/resources/application.yml  server.port
+
+  BLOG_HOST_PORT=$BLOG_HOST_PORT
+    Update:  $DEPLOY_ROOT/.env
+             $DEPLOY_ROOT/docker-compose.yml  →  "\${BLOG_HOST_PORT}:8082"
+    Container 8082: $REPO_ROOT/2-blog-service/src/main/resources/application.yml  server.port
+
+  MEDIA_HOST_PORT=$MEDIA_HOST_PORT
+    Update:  $DEPLOY_ROOT/.env
+             $DEPLOY_ROOT/docker-compose.yml  →  "\${MEDIA_HOST_PORT}:8083"
+    Container 8083: $REPO_ROOT/4-media-service/src/main/resources/application.yml  server.port
+
+  AUDIT_HOST_PORT=$AUDIT_HOST_PORT
+    Update:  $DEPLOY_ROOT/.env
+             $DEPLOY_ROOT/docker-compose.yml  →  "\${AUDIT_HOST_PORT}:8084"
+    Container 8084: $REPO_ROOT/5-audit-service/src/main/resources/application.yml  server.port
+
+  FRONTEND_HOST_PORT=$FRONTEND_HOST_PORT  →  container $FRONTEND_CONTAINER_PORT
+    Service: Next.js UI (browser URL uses HOST port only)
+    Update host:     $DEPLOY_ROOT/.env  FRONTEND_HOST_PORT
+                     $DEPLOY_ROOT/docker-compose.yml  →  "\${FRONTEND_HOST_PORT}:\${FRONTEND_CONTAINER_PORT}"
+    Update container: $DEPLOY_ROOT/.env  FRONTEND_CONTAINER_PORT
+                      $REPO_ROOT/3-frontend/Dockerfile  ENV PORT + EXPOSE
+                      $DEPLOY_ROOT/docker-compose.yml  environment PORT
+    Nginx (optional): $DEPLOY_ROOT/nginx/nginx.conf.example
+
+Reserved by auth-service (do not use here): 8081, 27017
 EOF
+}
+
+print_files_for_port() {
+  local port=$1
+  echo "       Files to update for host port $port:"
+  case "$port" in
+    "$MONGO_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  MONGO_HOST_PORT"
+      echo "         - $DEPLOY_ROOT/prereqs/docker-compose.yml"
+      ;;
+    "$REDIS_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  REDIS_HOST_PORT"
+      echo "         - $DEPLOY_ROOT/prereqs/docker-compose.yml"
+      ;;
+    "$GATEWAY_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  GATEWAY_HOST_PORT and NEXT_PUBLIC_GATEWAY_URL"
+      echo "         - $DEPLOY_ROOT/docker-compose.yml"
+      ;;
+    "$BLOG_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  BLOG_HOST_PORT"
+      echo "         - $DEPLOY_ROOT/docker-compose.yml"
+      ;;
+    "$MEDIA_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  MEDIA_HOST_PORT"
+      echo "         - $DEPLOY_ROOT/docker-compose.yml"
+      ;;
+    "$AUDIT_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  AUDIT_HOST_PORT"
+      echo "         - $DEPLOY_ROOT/docker-compose.yml"
+      ;;
+    "$FRONTEND_HOST_PORT")
+      echo "         - $DEPLOY_ROOT/.env  FRONTEND_HOST_PORT (browser URL :$FRONTEND_HOST_PORT)"
+      echo "         - $DEPLOY_ROOT/docker-compose.yml  ports mapping"
+      if [[ "$FRONTEND_HOST_PORT" != "$FRONTEND_CONTAINER_PORT" ]]; then
+        echo "         - container port $FRONTEND_CONTAINER_PORT: $REPO_ROOT/3-frontend/Dockerfile (ENV PORT, EXPOSE)"
+      fi
+      ;;
+    *)
+      echo "         - $DEPLOY_ROOT/.env  (add a *_HOST_PORT variable)"
+      echo "         - matching compose ports: in $DEPLOY_ROOT/docker-compose.yml or prereqs/"
+      ;;
+  esac
 }
 
 print_conflict_help() {
@@ -60,13 +159,13 @@ Resolve port conflicts:
   1. Inspect what is listening (replace PORT):
        ss -tlnp | grep :PORT
        sudo lsof -nP -iTCP:PORT -sTCP:LISTEN
-  2. Stop the other process/container, OR change the HOST port (left side of "HOST:CONTAINER")
-     in the compose file listed above. Example: "8080:8080" → "18080:8080"
-     - Apps: $DEPLOY_ROOT/docker-compose.yml
-     - Mongo/redis: $DEPLOY_ROOT/prereqs/docker-compose.yml
-     Container listen ports (right side) live in each service Dockerfile EXPOSE and
-     Spring application.yml (frontend: 3-frontend/Dockerfile ENV PORT, default 3000).
+  2. Either stop the conflicting process/container, OR raise the HOST port in $DEPLOY_ROOT/.env
+     (then redeploy). Compose reads \${VAR} from .env automatically when run from $DEPLOY_ROOT.
   3. Re-run: $SCRIPT_DIR/check-ports.sh all
+
+Changing only the HOST port: edit .env + redeploy (compose already uses \${*_HOST_PORT}).
+Changing the container listen port (right side): also edit the service application.yml or
+3-frontend/Dockerfile ENV PORT, then rebuild images.
 
 Auth uses 8081 and 27017 — keep those free for auth-service, not this stack.
 EOF
@@ -84,6 +183,7 @@ check_one() {
   if [[ -z "$line" ]]; then
     echo "  FAIL $port — in use on the host (not a recognized blog-cms container)"
     echo "       Inspect: ss -tlnp | grep :$port   OR   sudo lsof -nP -iTCP:$port -sTCP:LISTEN"
+    print_files_for_port "$port"
     return 1
   fi
 
@@ -93,7 +193,8 @@ check_one() {
     return 0
   fi
 
-  echo "  FAIL $port — Docker ($name) is using it; stop it or change the host port in compose"
+  echo "  FAIL $port — Docker ($name) is using it; stop it or change the host port"
+  print_files_for_port "$port"
   return 1
 }
 
@@ -102,15 +203,15 @@ shift || true
 
 case "$MODE" in
   prereqs)
-    PORTS=(27018)
-    [[ "${1:-}" == "--with-redis" ]] && PORTS=(27018 6380)
+    PORTS=("$MONGO_HOST_PORT")
+    [[ "${1:-}" == "--with-redis" ]] && PORTS=("$MONGO_HOST_PORT" "$REDIS_HOST_PORT")
     ;;
   apps)
-    PORTS=(8080 8082 8083 8084 3000)
+    PORTS=("$GATEWAY_HOST_PORT" "$BLOG_HOST_PORT" "$MEDIA_HOST_PORT" "$AUDIT_HOST_PORT" "$FRONTEND_HOST_PORT")
     ;;
   all)
-    PORTS=(27018 8080 8082 8083 8084 3000)
-    [[ "${1:-}" == "--with-redis" ]] && PORTS=(27018 6380 8080 8082 8083 8084 3000)
+    PORTS=("$MONGO_HOST_PORT" "$GATEWAY_HOST_PORT" "$BLOG_HOST_PORT" "$MEDIA_HOST_PORT" "$AUDIT_HOST_PORT" "$FRONTEND_HOST_PORT")
+    [[ "${1:-}" == "--with-redis" ]] && PORTS=("$MONGO_HOST_PORT" "$REDIS_HOST_PORT" "$GATEWAY_HOST_PORT" "$BLOG_HOST_PORT" "$MEDIA_HOST_PORT" "$AUDIT_HOST_PORT" "$FRONTEND_HOST_PORT")
     ;;
   *)
     PORTS=("$MODE" "$@")

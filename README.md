@@ -35,7 +35,7 @@ From **repo root** (`blog-cms-microservices/`):
 **3a — Blog Mongo (once):**
 
 ```bash
-docker compose -f 0-deploy/prereqs/docker-compose.yml up -d mongo
+docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml up -d mongo
 ```
 
 **3b — Gateway, blog, media, audit, frontend:**
@@ -112,7 +112,7 @@ Start auth before `./0-deploy/scripts/deploy.sh` — see [auth-service deploy/RE
 
 ### Port check failed / `check-ports.sh` errors
 
-Run `./0-deploy/scripts/check-ports.sh all` from repo root. It prints which host port maps to which service. If a port is taken by something else, inspect with `ss -tlnp | grep :PORT` or change the **host** side in `0-deploy/docker-compose.yml` (apps) or `0-deploy/prereqs/docker-compose.yml` (mongo). Update `NEXT_PUBLIC_GATEWAY_URL` if you change gateway's host port. Frontend host port `3000` is in compose; container `PORT` is in `3-frontend/Dockerfile`.
+Run `./0-deploy/scripts/check-ports.sh all` — it reads `*_HOST_PORT` from `0-deploy/.env` and prints which files to edit per service. Change the host port in `.env` first (e.g. `FRONTEND_HOST_PORT=3001`), then redeploy. For frontend container port, also set `FRONTEND_CONTAINER_PORT` and `3-frontend/Dockerfile` `ENV PORT`.
 
 ### What must `BLOG_TENANT_ID` match?
 

@@ -12,10 +12,11 @@ Databases on this instance: `blog` (blog-service), `audit` (audit-service).
 ## 3. Run
 
 ```bash
-cd 0-deploy/prereqs
-docker compose up -d mongo
-docker compose --profile redis up -d redis   # optional
+docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml up -d mongo
+docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml --profile redis up -d redis   # optional
 ```
+
+(Run from repo root; `MONGO_HOST_PORT` / `REDIS_HOST_PORT` come from `0-deploy/.env`.)
 
 Creates network **`cms-internal`**.
 
@@ -23,7 +24,7 @@ Creates network **`cms-internal`**.
 
 ```bash
 docker compose ps
-mongosh "mongodb://127.0.0.1:27018" --eval 'db.adminCommand({ ping: 1 })'
+mongosh "mongodb://127.0.0.1:${MONGO_HOST_PORT:-27018}" --eval 'db.adminCommand({ ping: 1 })'
 # → { ok: 1 }
 ```
 

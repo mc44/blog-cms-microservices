@@ -17,7 +17,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${GATEWAY_HOST_PORT:-8080}:8080"
     environment:
       AUTH_SERVICE_URL: ${AUTH_SERVICE_URL:-http://auth-service:8081}
       BLOG_SERVICE_URL: http://blog-service:8082
@@ -40,7 +40,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8082:8082"
+      - "${BLOG_HOST_PORT:-8082}:8082"
     environment:
       BLOG_MONGODB_URI: mongodb://mongo:27017
       BLOG_MONGODB_DATABASE: blog
@@ -63,7 +63,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8083:8083"
+      - "${MEDIA_HOST_PORT:-8083}:8083"
     environment:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
@@ -78,7 +78,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8084:8084"
+      - "${AUDIT_HOST_PORT:-8084}:8084"
     environment:
       AUDIT_MONGODB_URI: mongodb://mongo:27017
       AUDIT_MONGODB_DATABASE: audit
@@ -95,8 +95,9 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${FRONTEND_HOST_PORT:-3000}:${FRONTEND_CONTAINER_PORT:-3000}"
     environment:
+      PORT: ${FRONTEND_CONTAINER_PORT:-3000}
       NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8080}
       NEXT_PUBLIC_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
       NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Blog CMS}

@@ -29,13 +29,15 @@ Copy `AUTH_JWT_SECRET` from your auth server's env into this file.
 
 **`.env` syntax:** Quote values with spaces or apostrophes (e.g. `NEXT_PUBLIC_SITE_BYLINE="by mfajardo"`). Unquoted values break `deploy.sh` when it loads the file.
 
+**Host ports:** `GATEWAY_HOST_PORT`, `FRONTEND_HOST_PORT`, etc. in `.env` drive compose and `check-ports.sh`. Run `./scripts/check-ports.sh all` for a full file-by-file map.
+
 ## 3. Run / Deploy
 
 ### Local
 
 ```bash
 ./scripts/check-ports.sh prereqs
-cd prereqs && docker compose up -d mongo && cd ..
+docker compose --env-file .env -f prereqs/docker-compose.yml up -d mongo
 
 chmod +x scripts/deploy.sh scripts/check-ports.sh
 ./scripts/deploy.sh
