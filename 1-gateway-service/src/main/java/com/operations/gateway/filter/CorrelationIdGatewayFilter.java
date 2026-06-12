@@ -1,4 +1,4 @@
-cpackage com.operations.gateway.filter;
+package com.operations.gateway.filter;
 
 import java.util.UUID;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
