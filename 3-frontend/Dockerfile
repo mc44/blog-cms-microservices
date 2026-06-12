@@ -9,10 +9,6 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN mkdir -p public
-ARG NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080
-ARG NEXT_PUBLIC_TENANT_ID=blog-cms
-ENV NEXT_PUBLIC_GATEWAY_URL=$NEXT_PUBLIC_GATEWAY_URL
-ENV NEXT_PUBLIC_TENANT_ID=$NEXT_PUBLIC_TENANT_ID
 RUN npm run build
 
 FROM node:20-alpine AS runner
