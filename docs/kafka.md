@@ -14,11 +14,11 @@ Application code uses **Spring Kafka** (`spring-kafka`). Pointing `KAFKA_BOOTSTR
 ## Enable on a running stack
 
 ```bash
-cd deploy/prereqs
+cd 0-deploy/prereqs
 docker compose --profile kafka up -d redpanda
 ```
 
-In `deploy/.env`:
+In `0-deploy/.env`:
 
 ```bash
 KAFKA_ENABLED=true
@@ -28,7 +28,7 @@ KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
 Redeploy applications:
 
 ```bash
-cd deploy && ./scripts/deploy.sh
+cd 0-deploy && ./scripts/deploy.sh
 ```
 
 Default in `.env.example` is `KAFKA_ENABLED=false` so the stack runs without a broker.

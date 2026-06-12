@@ -1,58 +1,67 @@
-# Microservices Learning Curriculum
+# Blog CMS learning curriculum
 
-This curriculum is designed to help you learn by building in progressive levels, from a minimal runnable stack to more advanced microservices patterns.
+Ground-up study path for the live stack: [auth-service](https://github.com/mc44/auth-service) + numbered folders `0-deploy` → `5-audit-service`, optional Redpanda/Kafka.
 
-Use this in order:
+**Last aligned with:** [docs/ROADMAP.md](../ROADMAP.md).
 
-1. [01-foundations.md](./01-foundations.md)
-2. [02-level-up-iterations.md](./02-level-up-iterations.md)
-3. [05-upgrade-r2-auth-vertical-slice.md](./05-upgrade-r2-auth-vertical-slice.md)
-4. [06-upgrade-r3-core-domain-services.md](./06-upgrade-r3-core-domain-services.md)
-5. [07-upgrade-r4-frontend-integration.md](./07-upgrade-r4-frontend-integration.md)
-6. [08-upgrade-r5-notifications-sync-mvp.md](./08-upgrade-r5-notifications-sync-mvp.md)
-7. [09-upgrade-r6-async-backbone.md](./09-upgrade-r6-async-backbone.md)
-8. [10-upgrade-r7-realtime-updates.md](./10-upgrade-r7-realtime-updates.md)
-9. [11-upgrade-r8-r9-observability-deploy-hardening.md](./11-upgrade-r8-r9-observability-deploy-hardening.md)
-10. [03-checkpoints-and-skills.md](./03-checkpoints-and-skills.md)
-11. [04-command-reference.md](./04-command-reference.md)
-12. [12-portfolio-packaging-checklist.md](./12-portfolio-packaging-checklist.md)
+## Prerequisites
 
-## Learning outcomes
+- Docker Compose v2
+- Basic HTTP and JSON
+- Deploy **[auth-service](https://github.com/mc44/auth-service)** per its [README](https://github.com/mc44/auth-service/blob/main/README.md)
+- Secrets: [docs/SECURITY.md](../SECURITY.md) — never commit `0-deploy/.env`
 
-By the end of this track, you should be able to:
+## Modules
 
-- Run a minimal microservices baseline locally using Docker Compose.
-- Explain why Phase 1 is intentionally small (gateway + MongoDB + Redis).
-- Plan and execute iterative service expansion without overengineering.
-- Apply event-driven and real-time patterns at the right time.
-- Build stronger production habits around observability and deployment.
+| # | Module | Folder |
+|---|--------|--------|
+| 00 | [Architecture and repos](./00-architecture-and-repos.md) | (overview) |
+| 01 | [Deploy](./01-deploy.md) | `0-deploy/` |
+| 02 | [Auth sibling repo](./02-auth-sibling-repo.md) | [auth-service](https://github.com/mc44/auth-service) |
+| 03 | [Gateway service](./03-gateway-service.md) | `1-gateway-service/` |
+| 04 | [Blog service](./04-blog-service.md) | `2-blog-service/` |
+| 05 | [Frontend](./05-frontend.md) | `3-frontend/` |
+| 06 | [Media service](./06-media-service.md) | `4-media-service/` |
+| 07 | [Audit service](./07-audit-service.md) | `5-audit-service/` |
+| 08 | [Kafka / Redpanda](./08-kafka-redpanda.md) | `0-deploy/prereqs` |
+| 09 | [End-to-end publish trace](./09-end-to-end-publish-trace.md) | all |
 
-## How to study this curriculum
+### Appendices
 
-- Spend 60-90 minutes on each level and complete every checkpoint.
-- Type commands manually at least once before copy/pasting.
-- Keep notes after each level: what broke, how you debugged it, what you learned.
-- Repeat startup and teardown until the flow feels natural.
+- [Command reference](./appendix-commands.md)
+- [Code map](./appendix-code-map.md)
+- [Deferred topics](./appendix-deferred-topics.md)
 
-## Progression map
+## How to study
+
+1. Follow **00 → 09** in order the first time.
+2. Run every **Hands-on** block with the stack up ([01 — Deploy](./01-deploy.md)).
+3. Use **Verify** sections to confirm each module before moving on.
+4. Bookmark [appendix-commands.md](./appendix-commands.md) for daily use.
+
+## Progression
 
 ```mermaid
 flowchart TD
-  level0[Level0_MVP_Runtime] --> level1[Level1_Auth_And_GatewaySecurity]
-  level1 --> level2[Level2_Incident_And_Task_Domains]
-  level2 --> level3[Level3_Frontend_Integration]
-  level3 --> level4[Level4_Sync_Notifications]
-  level4 --> level5[Level5_Async_Backbone_Rabbit_Kafka]
-  level5 --> level6[Level6_Realtime_WebSockets]
-  level6 --> level7[Level7_Observability_And_Deploy]
+  m00[00_Architecture]
+  f0[0_deploy]
+  m02[02_Auth]
+  f1[1_gateway]
+  f2[2_blog]
+  f3[3_frontend]
+  f4[4_media]
+  f5[5_audit]
+  m08[08_Kafka]
+  m09[09_E2E]
+
+  m00 --> f0 --> m02 --> f1 --> f2 --> f3
+  f2 --> f4 --> f5
+  f5 --> m08 --> m09
+  f3 --> m09
 ```
 
 ## Source of truth
 
-These guides align to:
-
-- [../../README.md](../../README.md)
-- [../../SYSTEM_DESIGN.md](../../SYSTEM_DESIGN.md)
-- [../ROADMAP.md](../ROADMAP.md)
-- [../../infrastructure/docker/README.md](../../infrastructure/docker/README.md)
-- [../../infrastructure/docker/docker-compose.yml](../../infrastructure/docker/docker-compose.yml)
+- [README.md](../../README.md) — clone to working UI
+- [0-deploy/README.md](../../0-deploy/README.md) — server deploy
+- [SYSTEM_DESIGN.md](../../SYSTEM_DESIGN.md) — product architecture

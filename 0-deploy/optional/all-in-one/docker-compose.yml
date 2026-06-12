@@ -1,0 +1,128 @@
+# Phase 1 (MVP): MongoDB + Redis + gateway + auth + blog + media. See SYSTEM_DESIGN.md and docs/ROADMAP.md.
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  gateway:
+    build:
+      context: ../../../1-gateway-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_APPLICATION_NAME: gateway-service
+      AUTH_SERVICE_URL: http://auth-service:8081
+      BLOG_SERVICE_URL: http://blog-service:8082
+      MEDIA_SERVICE_URL: http://media-service:8083
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-env-please-change-me-in-env}
+      BLOG_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      blog-service:
+        condition: service_started
+      media-service:
+        condition: service_started
+      audit-service:
+        condition: service_started
+
+  auth-service:
+    build:
+      context: ../../../../auth-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_APPLICATION_NAME: auth-service
+      AUTH_MONGODB_URI: mongodb://mongo:27017
+      AUTH_MONGODB_DATABASE: auth
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-env-please-change-me-in-env}
+      AUTH_JWT_ISSUER: auth-service
+      AUTH_ACCESS_TOKEN_TTL_SECONDS: ${AUTH_ACCESS_TOKEN_TTL_SECONDS:-900}
+      AUTH_REFRESH_TOKEN_TTL_SECONDS: ${AUTH_REFRESH_TOKEN_TTL_SECONDS:-1209600}
+      AUTH_REFRESH_TOKEN_HMAC_KEY: ${AUTH_REFRESH_TOKEN_HMAC_KEY:-change-refresh-hmac-key}
+      AUTH_SEED_TENANT_ID: ${AUTH_SEED_TENANT_ID:-blog-cms}
+      AUTH_SEED_USER_EMAIL: ${AUTH_SEED_USER_EMAIL:-user@example.com}
+      AUTH_SEED_USER_PASSWORD: ${AUTH_SEED_USER_PASSWORD:-change-me}
+      AUTH_SEED_USER_ROLE: ${AUTH_SEED_USER_ROLE:-ROLE_OPERATOR}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  blog-service:
+    build:
+      context: ../../../2-blog-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_APPLICATION_NAME: blog-service
+      BLOG_MONGODB_URI: mongodb://mongo:27017
+      BLOG_MONGODB_DATABASE: blog
+      BLOG_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+      MEDIA_SERVICE_URL: http://media-service:8083
+      AUDIT_SERVICE_URL: http://audit-service:8084
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+      AUDIT_SERVICE_URL: http://audit-service:8084
+    depends_on:
+      mongo:
+        condition: service_healthy
+      media-service:
+        condition: service_started
+      audit-service:
+        condition: service_started
+
+  audit-service:
+    build:
+      context: ../../../5-audit-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      AUDIT_MONGODB_URI: mongodb://mongo:27017
+      AUDIT_MONGODB_DATABASE: audit
+      AUDIT_DEFAULT_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+      KAFKA_ENABLED: ${KAFKA_ENABLED:-false}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  media-service:
+    build:
+      context: ../../../4-media-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_APPLICATION_NAME: media-service
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+
+volumes:
+  mongo-data:

@@ -538,24 +538,19 @@ This project demonstrates:
 # 21. Suggested Repository Structure
 
 ```
-operations-workflow/
+blog-cms-microservices/
 
-├── gateway-service/
-├── auth-service/
-├── audit-service/
-├── incident-service/
-├── task-service/
-├── notification-service/
-├── analytics-service/
-├── frontend/
-├── infrastructure/
-│   ├── docker/
-│   ├── nginx/
-│   ├── monitoring/
-│   └── kafka/
+├── 0-deploy/
+├── 1-gateway-service/
+├── 2-blog-service/
+├── 3-frontend/
+├── 4-media-service/
+├── 5-audit-service/
 ├── docs/
-└── scripts/
+└── README.md
 ```
+
+Auth-service lives in [mc44/auth-service](https://github.com/mc44/auth-service) (separate repository).
 
 ---
 

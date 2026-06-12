@@ -1,153 +1,152 @@
 # Blog CMS
 
-Blog CMS is a multi-service application: a Spring Cloud Gateway fronts blog, media, and audit APIs, and a Next.js app provides the public site and editor. Authentication lives in a separate **[auth-service](https://github.com/mc44/auth-service)** repository.
+Multi-service blog platform: Spring Cloud Gateway, blog/media/audit APIs, Next.js frontend. Auth is a separate repo: **[auth-service](https://github.com/mc44/auth-service)**.
 
-Architecture reference: [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md). Milestones: [docs/ROADMAP.md](./docs/ROADMAP.md).
+Architecture: [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md). Milestones: [docs/ROADMAP.md](./docs/ROADMAP.md). Learning track: [docs/learning/README.md](./docs/learning/README.md).
 
-**Frontend branding** is env-driven (public template). See [frontend/README.md](./frontend/README.md). Example defaults in [`deploy/.env.example`](deploy/.env.example) use the mfajardo.com ecosystem (`blog by mfajardo`).
-
-**Secrets:** use [`deploy/.env`](deploy/.env) only (never commit). If a root `.env.local` was ever committed, rotate credentials per [docs/SECURITY.md](docs/SECURITY.md).
-
-## Repository layout
-
-| Repository | Contents |
-|------------|----------|
-| **auth-service** (sibling clone) | Login, JWT, MongoDB database `auth` |
-| **blog-cms-microservices** (this repo) | Gateway, blog, media, audit, frontend, deploy |
-
-```text
-parent/
-├── auth-service/
-└── blog-cms-microservices/
-```
-
-## Services and ports
-
-| Service | Port | Notes |
-|---------|------|--------|
-| gateway-service | 8080 | Single public API entry (browser and `curl`) |
-| blog-service | 8082 | Posts, categories, tags |
-| media-service | 8083 | Image upload (Cloudinary or dev fallback) |
-| audit-service | 8084 | Audit trail |
-| frontend | 3000 | Next.js UI |
-| MongoDB (blog stack) | 27018 | Host port; logical DBs `blog` and `audit` |
-
-Auth uses **8081** and Mongo **27017** in the auth-service deployment — do not reuse those ports for the blog stack.
-
----
-
-## Run locally (for testing the site)
-
-These steps assume **auth-service is already running** (reachable at `http://localhost:8081`) and **blog MongoDB is already running** (this repo’s `deploy/prereqs` Mongo on host port **27018**). If Mongo is not up yet, start it once:
+## 1. Clone
 
 ```bash
-cd deploy/prereqs
-docker compose up -d mongo
+git clone <this-repo-url> blog-cms-microservices
+cd blog-cms-microservices
 ```
 
-### 1. Configure environment
+Deploy **auth-service** first — clone and run steps: [auth-service README](https://github.com/mc44/auth-service/blob/main/README.md) and [deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md). Auth listens on **8081** and creates Docker network `auth-platform`.
 
-Secrets and app config live in **`deploy/.env`** only (not a root `.env.local`). MongoDB runs in Docker via `deploy/prereqs` — no Atlas URI in this repo.
+## 2. Configure
 
 ```bash
-cd deploy
+cd 0-deploy
 cp .env.example .env
 ```
 
-Edit `deploy/.env`:
-
 | Variable | Requirement |
 |----------|-------------|
-| `AUTH_JWT_SECRET` | **Must match** the value in auth-service `deploy/.env` |
-| `BLOG_TENANT_ID` | Must match a tenant that exists in auth (default `blog-cms` if you used auth seed defaults) |
-| `AUTH_SERVICE_URL` | `http://auth-service:8081` when gateway runs in Docker on `auth-platform`; use auth’s deploy docs if your auth hostname differs |
-| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8080` for local frontend |
+| `AUTH_JWT_SECRET` | Must match [auth-service deploy/.env.example](https://github.com/mc44/auth-service/blob/main/deploy/.env.example) |
+| `BLOG_TENANT_ID` | Tenant at login (default `blog-cms`) |
+| `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8080` for local |
 
-Cloudinary variables are optional; without them, media-service stores uploads in memory for development.
+Secrets only in `0-deploy/.env` (gitignored). See [docs/SECURITY.md](./docs/SECURITY.md).
 
-Docker networks **`auth-platform`** (from auth deploy) and **`cms-internal`** (from blog prereqs) must exist before starting apps.
+## 3. Run
 
-### 2. Start the blog stack
-
-From the repository root:
+Blog Mongo (once):
 
 ```bash
-chmod +x deploy/scripts/deploy.sh deploy/scripts/check-ports.sh
-./deploy/scripts/deploy.sh
+cd 0-deploy/prereqs && docker compose up -d mongo
 ```
 
-This builds and starts gateway, blog-service, media-service, audit-service, and frontend.
-
-### 3. Start the frontend in dev mode (optional)
-
-If you prefer hot reload instead of the Dockerized frontend:
+Start the stack (from repo root):
 
 ```bash
-cd frontend
-npm install
-export NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080
-npm run dev
+chmod +x 0-deploy/scripts/deploy.sh 0-deploy/scripts/check-ports.sh
+./0-deploy/scripts/deploy.sh
 ```
 
-Open **http://localhost:3000** (or port 3000 from Compose if you skipped this step).
+Optional hot-reload frontend: [3-frontend/README.md](./3-frontend/README.md).
 
-### 4. Sign in and smoke-test
-
-Default seeded user (when auth was started with its default seed):
-
-- Email: `user@example.com`
-- Password: `change-me`
-- Tenant: same as `BLOG_TENANT_ID` in `deploy/.env` (e.g. `blog-cms`)
-
-Quick checks:
+## 4. Verify
 
 ```bash
-curl -s http://localhost:8080/actuator/health
-curl -s http://localhost:8080/hello
+curl -s http://localhost:8080/actuator/health    # {"status":"UP"}
+curl -s http://localhost:8080/hello              # Hello from gateway
 
 curl -s -X POST http://localhost:8080/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"tenantId":"blog-cms","email":"user@example.com","password":"change-me"}'
+# → JSON with accessToken
 ```
 
-Then use the UI: **Login** → create a post → publish → view **Posts**.
+Open **http://localhost:3000** → Login → create and publish a post.
 
-### 5. Run gateway on the host (alternative)
+## FAQ
 
-If blog services run in Docker but you want the gateway under `mvn`:
+### How do I pull updates and redeploy?
 
-```bash
-cd gateway-service
-cp config/localhost.properties.example config/localhost.properties
-# Set AUTH_JWT_SECRET to match auth; URLs already point at localhost:8081–8084
-mvn spring-boot:run
+**This repo:** `git pull` then `./0-deploy/scripts/deploy.sh` from the repo root (rebuilds app containers). Blog Mongo in `0-deploy/prereqs` usually stays up unless `docker-compose.yml` there changed.
+
+**Auth:** `git pull` in your auth clone, then redeploy per [auth-service deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md).
+
+**Order:** auth first if auth changed → blog Mongo if prereqs changed → `./0-deploy/scripts/deploy.sh`.
+
+**VPS:** `cd 0-deploy && git pull && ./scripts/deploy.sh`. CI can also deploy pre-built images when `VPS_DEPLOY_ENABLED` is set.
+
+After any pull, compare `0-deploy/.env` with `0-deploy/.env.example` — add any new variables locally (never commit `.env`).
+
+### How does the gateway connect to auth, and how do tokens work?
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant GW as gateway_8080
+  participant Auth as auth_8081
+  participant Blog as blog_8082
+
+  Client->>GW: POST /auth/login
+  GW->>Auth: proxy via AUTH_SERVICE_URL
+  Auth-->>Client: accessToken
+
+  Client->>GW: POST /blog/posts + Authorization Bearer
+  GW->>GW: validate JWT with AUTH_JWT_SECRET
+  GW->>GW: add X-User-Id X-Tenant-Id X-Correlation-Id
+  GW->>Blog: proxy with identity headers
+  Blog-->>Client: response
 ```
 
-See [gateway-service/README.md](./gateway-service/README.md) for the full route map.
+- **Connect:** Gateway joins Docker networks `auth-platform` and `cms-internal`. `AUTH_SERVICE_URL=http://auth-service:8081` proxies `/auth/**` to auth ([application.yml](./1-gateway-service/src/main/resources/application.yml)).
+- **Login:** Public at the gateway; auth issues the JWT; the browser stores `accessToken`.
+- **Protected routes:** Client sends `Authorization: Bearer …`. Gateway validates with `AUTH_JWT_SECRET` ([SecurityConfig.java](./1-gateway-service/src/main/java/com/operations/gateway/config/SecurityConfig.java)), then adds `X-User-Id` and `X-Tenant-Id` for blog/media/audit.
+- **More detail:** [GATEWAY_INTEGRATION.md](https://github.com/mc44/auth-service/blob/main/docs/GATEWAY_INTEGRATION.md), [docs/learning/02-auth-sibling-repo.md](./docs/learning/02-auth-sibling-repo.md).
 
----
+### Login works but blog writes return 401
 
-## Optional: Kafka / Redpanda
+`AUTH_JWT_SECRET` in `0-deploy/.env` must match the value in [auth-service deploy/.env.example](https://github.com/mc44/auth-service/blob/main/deploy/.env.example) (or your auth server's live `.env`). Restart apps after changing it.
 
-Event publishing is off by default (`KAFKA_ENABLED=false`). To enable: [docs/kafka.md](docs/kafka.md).
+### `auth-platform` network not found
 
----
+Start auth before `./0-deploy/scripts/deploy.sh` — see [auth-service deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md).
+
+### What must `BLOG_TENANT_ID` match?
+
+The `tenantId` you use at login. It must exist in auth (default seed `blog-cms` if you use auth's default seed settings).
+
+### Why two Mongo ports (27017 vs 27018)?
+
+Auth Mongo runs with auth ([auth-service](https://github.com/mc44/auth-service)) on **27017**. This repo's blog + audit data use Mongo on **27018** via `0-deploy/prereqs`.
+
+### Do I need Kafka?
+
+No. Default is `KAFKA_ENABLED=false`. See [docs/kafka.md](./docs/kafka.md) to enable Redpanda.
+
+### Do I need Cloudinary?
+
+No for local dev — media-service uses in-memory storage. Set `CLOUDINARY_*` in `0-deploy/.env` for persistent production uploads.
+
+### Should clients call blog-service on :8082 directly?
+
+Use the gateway on **:8080** for all browser and API traffic. Direct service ports are for debugging only.
+
+### Frontend: Docker vs `npm run dev`?
+
+Docker frontend comes from `deploy.sh` on port 3000. For hot reload: `npm run dev` in `3-frontend/` with `NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080`.
+
+### Where do secrets live?
+
+`0-deploy/.env` in this repo and auth's deploy env on the auth server — see [docs/SECURITY.md](./docs/SECURITY.md).
 
 ## Deploy on a server
 
-Production-style steps (two clones, build on server): [deploy/README.md](deploy/README.md).
+Full VPS steps: [0-deploy/README.md](./0-deploy/README.md).
 
----
+## Module docs
 
-## Module documentation
+| Folder | README |
+|--------|--------|
+| `0-deploy/` | [0-deploy/README.md](./0-deploy/README.md) |
+| `1-gateway-service/` | [1-gateway-service/README.md](./1-gateway-service/README.md) |
+| `2-blog-service/` | [2-blog-service/README.md](./2-blog-service/README.md) |
+| `3-frontend/` | [3-frontend/README.md](./3-frontend/README.md) |
+| `4-media-service/` | [4-media-service/README.md](./4-media-service/README.md) |
+| `5-audit-service/` | [5-audit-service/README.md](./5-audit-service/README.md) |
 
-| Path | Topic |
-|------|--------|
-| [gateway-service/README.md](./gateway-service/README.md) | Routes, JWT rules, headers |
-| [blog-service/README.md](./blog-service/README.md) | Post and taxonomy APIs |
-| [media-service/README.md](./media-service/README.md) | Uploads and Cloudinary |
-| [audit-service/README.md](./audit-service/README.md) | Audit HTTP and Kafka consumer |
-| [frontend/README.md](./frontend/README.md) | Next.js dev and env vars |
-| [deploy/prereqs/README.md](./deploy/prereqs/README.md) | Blog MongoDB and Redis |
-| [infrastructure/docker/README.md](./infrastructure/docker/README.md) | All-in-one Compose (includes auth) |
-| [docs/kafka.md](docs/kafka.md) | Redpanda profile and events |
+Optional Kafka: [docs/kafka.md](./docs/kafka.md).

@@ -1,0 +1,59 @@
+# 01 — Deploy
+
+## Goal
+
+Run the blog stack: Mongo in `0-deploy/prereqs`, secrets in `0-deploy/.env`, apps via `deploy.sh`.
+
+## Prerequisites
+
+- Docker Compose v2
+- [00 — Architecture](./00-architecture-and-repos.md)
+- [auth-service](https://github.com/mc44/auth-service) running ([deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md); [02 — Auth](./02-auth-sibling-repo.md))
+
+## Concepts
+
+**Deploy order:**
+
+1. auth-service → network `auth-platform`
+2. `0-deploy/prereqs` → Mongo on **27018**, network `cms-internal`
+3. `0-deploy/.env` → copy from `.env.example`; sync `AUTH_JWT_SECRET`
+4. `./0-deploy/scripts/deploy.sh` → gateway, blog, media, audit, frontend
+
+Secrets live only in **`0-deploy/.env`** (gitignored). See [docs/SECURITY.md](../SECURITY.md).
+
+**Optional all-in-one:** [0-deploy/optional/all-in-one/README.md](../../0-deploy/optional/all-in-one/README.md) — single laptop demo only.
+
+Operational reference: [0-deploy/README.md](../../0-deploy/README.md) (includes VPS steps).
+
+## Hands-on
+
+```bash
+cd 0-deploy/prereqs && docker compose up -d mongo
+cd .. && cp .env.example .env
+# Edit .env: AUTH_JWT_SECRET must match auth-service
+
+chmod +x scripts/deploy.sh scripts/check-ports.sh
+./scripts/deploy.sh
+```
+
+## Verify
+
+```bash
+curl -s http://localhost:8080/actuator/health   # {"status":"UP"}
+curl -s http://localhost:8080/hello               # greeting
+docker compose ps                               # five app containers Up
+```
+
+Open http://localhost:3000.
+
+## Checkpoint
+
+1. What file must exist before `deploy.sh` runs?
+2. Which compose file creates `cms-internal`?
+3. Why must `AUTH_JWT_SECRET` match between repos?
+4. What happens if `auth-platform` network does not exist?
+5. Where is Redpanda defined, and is it started by default?
+
+## Next
+
+[02 — Auth sibling repo](./02-auth-sibling-repo.md)
