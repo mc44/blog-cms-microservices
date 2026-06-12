@@ -1,6 +1,6 @@
 # Blog CMS learning curriculum
 
-Ground-up study path for the live stack: [auth-service](https://github.com/mc44/auth-service) + numbered folders `0-deploy` → `5-audit-service`, optional Redpanda/Kafka.
+Modules for [auth-service](https://github.com/mc44/auth-service) plus numbered folders `0-deploy` through `5-audit-service`, with optional Redpanda/Kafka. Run the stack first: [README.md](../../README.md) §1–4.
 
 **Last aligned with:** [docs/ROADMAP.md](../ROADMAP.md).
 
@@ -9,7 +9,7 @@ Ground-up study path for the live stack: [auth-service](https://github.com/mc44/
 - Docker Compose v2
 - Basic HTTP and JSON
 - Deploy **[auth-service](https://github.com/mc44/auth-service)** per its [README](https://github.com/mc44/auth-service/blob/main/README.md)
-- Secrets: [docs/SECURITY.md](../SECURITY.md) — never commit `0-deploy/.env`
+- Secrets: `0-deploy/.env` only — see root [README.md](../../README.md) §2
 
 ## Modules
 
@@ -34,10 +34,9 @@ Ground-up study path for the live stack: [auth-service](https://github.com/mc44/
 
 ## How to study
 
-1. Follow **00 → 09** in order the first time.
-2. Run every **Hands-on** block with the stack up ([01 — Deploy](./01-deploy.md)).
-3. Use **Verify** sections to confirm each module before moving on.
-4. Bookmark [appendix-commands.md](./appendix-commands.md) for daily use.
+1. Follow **00 → 09** in order.
+2. Run each **Hands-on** block after [01 — Deploy](./01-deploy.md).
+3. Pass each **Verify** section before the next module. Command cheat sheet: [appendix-commands.md](./appendix-commands.md).
 
 ## Progression
 

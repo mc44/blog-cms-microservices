@@ -33,7 +33,11 @@ Copy `AUTH_JWT_SECRET` from your auth server's env into this file.
 
 ## 3. Run / Deploy
 
+Equivalent repo-root commands: [README.md](../README.md) §3.
+
 ### Local
+
+From `0-deploy/`:
 
 ```bash
 ./scripts/check-ports.sh prereqs
@@ -48,13 +52,13 @@ Requires networks **`auth-platform`** (auth) and **`cms-internal`** (mongo).
 ### Server (VPS)
 
 1. Deploy [auth-service](https://github.com/mc44/auth-service) ([deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md)); verify `curl -s http://127.0.0.1:8081/actuator/health`
-2. Start blog Mongo: `cd prereqs && docker compose up -d mongo`
-3. Configure `0-deploy/.env` with production URLs
-4. `./scripts/deploy.sh`
+2. Configure `0-deploy/.env` with production URLs; `chmod 600 .env`
+3. From repo root: `docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml up -d mongo`
+4. `cd 0-deploy && ./scripts/check-ports.sh all && ./scripts/deploy.sh`
 
 ### Redeploy after git pull
 
-`git pull` then `./scripts/deploy.sh`. Full pull/redeploy order (auth + env checks): root [README.md](../README.md) FAQ.
+`git pull` then `./scripts/deploy.sh`. Pull/redeploy order: root [README.md](../README.md) FAQ.
 
 ### Optional: all-in-one local stack
 
@@ -68,7 +72,7 @@ Single compose including auth build: [optional/all-in-one/README.md](./optional/
 curl -s http://localhost:8080/actuator/health
 curl -s http://localhost:8080/hello
 
-docker compose ps
+docker compose --env-file .env ps
 # gateway, blog-service, media-service, audit-service, frontend → Up
 ```
 

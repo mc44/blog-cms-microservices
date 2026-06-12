@@ -26,9 +26,10 @@ Ops reference: [docs/kafka.md](../kafka.md).
 
 ### Enable Redpanda
 
+From repo root:
+
 ```bash
-cd 0-deploy/prereqs
-docker compose --profile kafka up -d redpanda
+docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml --profile kafka up -d redpanda
 ```
 
 In `0-deploy/.env`:
@@ -39,7 +40,7 @@ KAFKA_BOOTSTRAP_SERVERS=redpanda:9092
 ```
 
 ```bash
-cd 0-deploy && ./scripts/deploy.sh
+./0-deploy/scripts/deploy.sh
 ```
 
 Publish a post; check audit events and container logs.

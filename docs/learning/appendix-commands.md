@@ -82,14 +82,14 @@ mongosh "mongodb://127.0.0.1:27018/audit" --eval 'db.audit_events.find().sort({o
 ```bash
 cd 0-deploy
 docker compose logs -f gateway
-docker compose logs -f blog-service audit-service
-docker compose ps
+docker compose --env-file 0-deploy/.env -f 0-deploy/docker-compose.yml logs -f blog-service audit-service
+docker compose --env-file 0-deploy/.env -f 0-deploy/docker-compose.yml ps
 ```
 
 Restart one service:
 
 ```bash
-docker compose -f 0-deploy/docker-compose.yml restart blog-service
+docker compose --env-file 0-deploy/.env -f 0-deploy/docker-compose.yml restart blog-service
 ```
 
 ## Frontend dev

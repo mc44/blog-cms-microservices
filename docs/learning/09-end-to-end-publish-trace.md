@@ -56,7 +56,7 @@ sequenceDiagram
 1. Set `X-Correlation-Id: trace-001` on publish request.
 2. Publish one post.
 3. `curl` audit events; find matching `correlationId`.
-4. `docker compose -f 0-deploy/docker-compose.yml logs blog-service audit-service | head -50`
+4. `docker compose --env-file 0-deploy/.env -f 0-deploy/docker-compose.yml logs blog-service audit-service | head -50`
 
 ## Verify
 

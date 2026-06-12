@@ -23,7 +23,7 @@ Creates network **`cms-internal`**.
 ## 4. Verify
 
 ```bash
-docker compose ps
+docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml ps
 mongosh "mongodb://127.0.0.1:${MONGO_HOST_PORT:-27018}" --eval 'db.adminCommand({ ping: 1 })'
 # → { ok: 1 }
 ```

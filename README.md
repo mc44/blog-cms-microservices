@@ -7,11 +7,11 @@ Architecture: [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md). Milestones: [docs/ROADMAP.
 ## 1. Clone
 
 ```bash
-git clone <this-repo-url> blog-cms-microservices
+git clone https://github.com/mc44/blog-cms-microservices.git blog-cms-microservices
 cd blog-cms-microservices
 ```
 
-Deploy **auth-service** first — clone and run steps: [auth-service README](https://github.com/mc44/auth-service/blob/main/README.md) and [deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md). Auth listens on **8081** and creates Docker network `auth-platform`.
+Deploy **auth-service** first: [auth-service README](https://github.com/mc44/auth-service/blob/main/README.md) and [deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md). Auth listens on **8081** and creates Docker network `auth-platform`.
 
 ## 2. Configure
 
@@ -26,7 +26,12 @@ cp .env.example .env
 | `BLOG_TENANT_ID` | Tenant at login (default `blog-cms`) |
 | `NEXT_PUBLIC_GATEWAY_URL` | `http://localhost:8080` for local |
 
-Secrets only in `0-deploy/.env` (gitignored). Quote branding values that contain spaces or `'` (see `0-deploy/.env.example`). See [docs/SECURITY.md](./docs/SECURITY.md).
+**Secrets**
+
+- Store only in `0-deploy/.env` (gitignored); on a VPS run `chmod 600 0-deploy/.env`.
+- Auth secrets live in auth's deploy env on the auth host — never commit either file.
+- Quote values that contain spaces or `'` (e.g. `NEXT_PUBLIC_SITE_BYLINE="by mfajardo"`); unquoted values break `deploy.sh` when it sources `.env`.
+- `AUTH_JWT_SECRET` must match auth; restart app containers after changing it.
 
 ## 3. Run
 
@@ -42,10 +47,11 @@ docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml u
 
 ```bash
 chmod +x 0-deploy/scripts/deploy.sh 0-deploy/scripts/check-ports.sh
+./0-deploy/scripts/check-ports.sh all
 ./0-deploy/scripts/deploy.sh
 ```
 
-`deploy.sh` only starts application containers. Auth and Mongo are separate prerequisites (§1 and 3a).
+`deploy.sh` starts application containers only. Auth and Mongo are prerequisites (§1 and 3a).
 
 Optional hot-reload frontend: [3-frontend/README.md](./3-frontend/README.md).
 
@@ -67,15 +73,7 @@ Open **http://localhost:3000** → Login → create and publish a post.
 
 ### How do I pull updates and redeploy?
 
-**This repo:** `git pull` then `./0-deploy/scripts/deploy.sh` from the repo root (rebuilds app containers). Blog Mongo in `0-deploy/prereqs` usually stays up unless `docker-compose.yml` there changed.
-
-**Auth:** `git pull` in your auth clone, then redeploy per [auth-service deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md).
-
-**Order:** auth first if auth changed → blog Mongo if prereqs changed → `./0-deploy/scripts/deploy.sh`.
-
-**VPS:** `cd 0-deploy && git pull && ./scripts/deploy.sh`. CI can also deploy pre-built images when `VPS_DEPLOY_ENABLED` is set.
-
-After any pull, compare `0-deploy/.env` with `0-deploy/.env.example` — add any new variables locally (never commit `.env`).
+`git pull` → `./0-deploy/scripts/deploy.sh` from repo root. Restart auth first if auth changed; recreate blog Mongo only if `0-deploy/prereqs/docker-compose.yml` changed. Compare `0-deploy/.env` with `.env.example` after each pull. VPS detail: [0-deploy/README.md](./0-deploy/README.md).
 
 ### How does the gateway connect to auth, and how do tokens work?
 
@@ -97,54 +95,43 @@ sequenceDiagram
   Blog-->>Client: response
 ```
 
-- **Connect:** Gateway joins Docker networks `auth-platform` and `cms-internal`. `AUTH_SERVICE_URL=http://auth-service:8081` proxies `/auth/**` to auth ([application.yml](./1-gateway-service/src/main/resources/application.yml)).
-- **Login:** Public at the gateway; auth issues the JWT; the browser stores `accessToken`.
-- **Protected routes:** Client sends `Authorization: Bearer …`. Gateway validates with `AUTH_JWT_SECRET` ([SecurityConfig.java](./1-gateway-service/src/main/java/com/operations/gateway/config/SecurityConfig.java)), then adds `X-User-Id` and `X-Tenant-Id` for blog/media/audit.
-- **More detail:** [GATEWAY_INTEGRATION.md](https://github.com/mc44/auth-service/blob/main/docs/GATEWAY_INTEGRATION.md), [docs/learning/02-auth-sibling-repo.md](./docs/learning/02-auth-sibling-repo.md).
+Gateway joins `auth-platform` and `cms-internal`; `AUTH_SERVICE_URL` proxies `/auth/**` to auth ([application.yml](./1-gateway-service/src/main/resources/application.yml)). Protected routes require `Authorization: Bearer …`; gateway validates with `AUTH_JWT_SECRET` ([SecurityConfig.java](./1-gateway-service/src/main/java/com/operations/gateway/config/SecurityConfig.java)) and forwards `X-User-Id` / `X-Tenant-Id` to downstream services. Detail: [docs/learning/02-auth-sibling-repo.md](./docs/learning/02-auth-sibling-repo.md), [GATEWAY_INTEGRATION.md](https://github.com/mc44/auth-service/blob/main/docs/GATEWAY_INTEGRATION.md).
 
 ### Login works but blog writes return 401
 
-`AUTH_JWT_SECRET` in `0-deploy/.env` must match the value in [auth-service deploy/.env.example](https://github.com/mc44/auth-service/blob/main/deploy/.env.example) (or your auth server's live `.env`). Restart apps after changing it.
+`AUTH_JWT_SECRET` mismatch or stale token. Match auth's live secret (see §2), redeploy apps, log in again.
 
 ### `auth-platform` network not found
 
-Start auth before `./0-deploy/scripts/deploy.sh` — see [auth-service deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md).
+Start auth before `deploy.sh` — [auth-service deploy/README.md](https://github.com/mc44/auth-service/blob/main/deploy/README.md).
 
 ### Port check failed / `check-ports.sh` errors
 
-Run `./0-deploy/scripts/check-ports.sh all` — it reads `*_HOST_PORT` from `0-deploy/.env` and prints which files to edit per service. Change the host port in `.env` first (e.g. `FRONTEND_HOST_PORT=3001`), then redeploy. For frontend container port, also set `FRONTEND_CONTAINER_PORT` and `3-frontend/Dockerfile` `ENV PORT`.
+`./0-deploy/scripts/check-ports.sh all` reads `*_HOST_PORT` from `.env` and lists files to edit. Change the host port in `.env` (e.g. `FRONTEND_HOST_PORT=3001`), then redeploy. For a non-default frontend container port, set `FRONTEND_CONTAINER_PORT` and `3-frontend/Dockerfile` `ENV PORT`.
 
 ### What must `BLOG_TENANT_ID` match?
 
-The `tenantId` you use at login. It must exist in auth (default seed `blog-cms` if you use auth's default seed settings).
+The `tenantId` at login; must exist in auth (default seed `blog-cms`).
 
 ### Why two Mongo ports (27017 vs 27018)?
 
-Auth Mongo runs with auth ([auth-service](https://github.com/mc44/auth-service)) on **27017**. This repo's blog + audit data use Mongo on **27018** via `0-deploy/prereqs`.
+Auth Mongo: **27017** ([auth-service](https://github.com/mc44/auth-service)). Blog + audit data: **27018** (`0-deploy/prereqs`).
 
-### Do I need Kafka?
+### Do I need Kafka or Cloudinary?
 
-No. Default is `KAFKA_ENABLED=false`. See [docs/kafka.md](./docs/kafka.md) to enable Redpanda.
-
-### Do I need Cloudinary?
-
-No for local dev — media-service uses in-memory storage. Set `CLOUDINARY_*` in `0-deploy/.env` for persistent production uploads.
+No for local dev. Default `KAFKA_ENABLED=false` — see [docs/kafka.md](./docs/kafka.md). Media uses in-memory storage without `CLOUDINARY_*` in `.env`.
 
 ### Should clients call blog-service on :8082 directly?
 
-Use the gateway on **:8080** for all browser and API traffic. Direct service ports are for debugging only.
+No — use gateway **:8080** for browser and API traffic.
 
 ### Frontend: Docker vs `npm run dev`?
 
-Docker frontend comes from `deploy.sh` on port 3000. For hot reload: `npm run dev` in `3-frontend/` with `NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080`.
-
-### Where do secrets live?
-
-`0-deploy/.env` in this repo and auth's deploy env on the auth server — see [docs/SECURITY.md](./docs/SECURITY.md).
+`deploy.sh` serves the frontend on port 3000. Hot reload: `npm run dev` in `3-frontend/` with `NEXT_PUBLIC_GATEWAY_URL=http://localhost:8080`.
 
 ## Deploy on a server
 
-Full VPS steps: [0-deploy/README.md](./0-deploy/README.md).
+VPS: [0-deploy/README.md](./0-deploy/README.md).
 
 ## Module docs
 

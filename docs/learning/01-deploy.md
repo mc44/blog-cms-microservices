@@ -19,29 +19,33 @@ Run the blog stack: Mongo in `0-deploy/prereqs`, secrets in `0-deploy/.env`, app
 3. `0-deploy/.env` → copy from `.env.example`; sync `AUTH_JWT_SECRET`
 4. `./0-deploy/scripts/deploy.sh` → gateway, blog, media, audit, frontend
 
-Secrets live only in **`0-deploy/.env`** (gitignored). See [docs/SECURITY.md](../SECURITY.md).
+Secrets live only in **`0-deploy/.env`** (gitignored) — see root [README.md](../../README.md) §2.
 
 **Optional all-in-one:** [0-deploy/optional/all-in-one/README.md](../../0-deploy/optional/all-in-one/README.md) — single laptop demo only.
 
-Operational reference: [0-deploy/README.md](../../0-deploy/README.md) (includes VPS steps).
+Operational reference: [0-deploy/README.md](../../0-deploy/README.md) (VPS steps).
 
 ## Hands-on
 
+From repo root — same as [README.md](../../README.md) §3:
+
 ```bash
-cd 0-deploy/prereqs && docker compose up -d mongo
-cd .. && cp .env.example .env
+cd 0-deploy && cp .env.example .env
 # Edit .env: AUTH_JWT_SECRET must match auth-service
 
-chmod +x scripts/deploy.sh scripts/check-ports.sh
-./scripts/deploy.sh
+docker compose --env-file 0-deploy/.env -f 0-deploy/prereqs/docker-compose.yml up -d mongo
+
+chmod +x 0-deploy/scripts/deploy.sh 0-deploy/scripts/check-ports.sh
+./0-deploy/scripts/check-ports.sh all
+./0-deploy/scripts/deploy.sh
 ```
 
 ## Verify
 
 ```bash
 curl -s http://localhost:8080/actuator/health   # {"status":"UP"}
-curl -s http://localhost:8080/hello               # greeting
-docker compose ps                               # five app containers Up
+curl -s http://localhost:8080/hello             # greeting
+docker compose --env-file 0-deploy/.env -f 0-deploy/docker-compose.yml ps
 ```
 
 Open http://localhost:3000.

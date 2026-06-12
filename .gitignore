@@ -14,10 +14,10 @@
 .env
 .env.*
 .env.local
-frontend/.env.local
+3-frontend/.env.local
 !.env.example
 !**/.env.example
-deploy/.env
+0-deploy/.env
 
 # IDE / OS
 .idea/
