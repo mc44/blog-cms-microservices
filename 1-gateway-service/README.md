@@ -16,6 +16,7 @@ Set in `0-deploy/.env` (Docker) or `config/localhost.properties` (JVM):
 | `MEDIA_SERVICE_URL` | `http://media-service:8083` | Media upstream |
 | `AUDIT_SERVICE_URL` | `http://audit-service:8084` | Audit upstream |
 | `BLOG_TENANT_ID` | `blog-cms` | Tenant context |
+| `GATEWAY_CORS_ORIGINS` | `http://localhost:3000` | Comma-separated browser origins for CORS |
 
 Forwarded headers: `X-User-Id` (JWT `sub`), `X-Tenant-Id`, `X-Correlation-Id`.
 

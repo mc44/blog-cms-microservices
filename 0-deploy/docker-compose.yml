@@ -25,6 +25,7 @@ services:
       AUDIT_SERVICE_URL: http://audit-service:8084
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:-change-me-in-env-please-change-me-in-env}
       BLOG_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
+      GATEWAY_CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-http://localhost:3000}
     depends_on:
       - blog-service
       - media-service

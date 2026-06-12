@@ -8,20 +8,6 @@ spring:
     import: optional:file:./config/localhost.properties
   cloud:
     gateway:
-      globalcors:
-        corsConfigurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-            allowedMethods:
-              - GET
-              - POST
-              - PATCH
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedHeaders: "*"
-            allowCredentials: true
       routes:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
