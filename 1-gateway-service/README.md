@@ -10,7 +10,7 @@ Set in `0-deploy/.env` (Docker) or `config/localhost.properties` (JVM):
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AUTH_JWT_SECRET` | — | **Required**; must match [auth-service](https://github.com/mc44/auth-service/blob/main/deploy/.env.example) |
+| `AUTH_JWT_SECRET` | — | **Required**; same string as auth-service; gateway derives HS256 key via SHA-256 of the secret (matches auth `TokenService`) |
 | `AUTH_SERVICE_URL` | `http://auth-service:8081` | Auth upstream |
 | `BLOG_SERVICE_URL` | `http://blog-service:8082` | Blog upstream |
 | `MEDIA_SERVICE_URL` | `http://media-service:8083` | Media upstream |

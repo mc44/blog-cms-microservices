@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/api";
-import { setAccessToken } from "@/lib/auth";
+import { setTokens } from "@/lib/auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError(null);
     try {
       const tokens = await login(email, password);
-      setAccessToken(tokens.accessToken);
+      setTokens(tokens.accessToken, tokens.refreshToken);
       router.push("/me/posts");
     } catch {
       setError("Invalid email or password, or the gateway is unreachable.");

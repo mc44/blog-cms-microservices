@@ -100,6 +100,7 @@ services:
     environment:
       PORT: ${FRONTEND_CONTAINER_PORT:-3000}
       NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8080}
+      GATEWAY_INTERNAL_URL: ${GATEWAY_INTERNAL_URL:-http://gateway:8080}
       NEXT_PUBLIC_TENANT_ID: ${BLOG_TENANT_ID:-blog-cms}
       NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Blog CMS}
     depends_on:

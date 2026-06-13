@@ -1,8 +1,7 @@
 package com.operations.gateway.config;
 
-import java.nio.charset.StandardCharsets;
+import com.operations.gateway.security.JwtSecretKeySupport;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,7 +37,7 @@ public class SecurityConfig {
 
   @Bean
   ReactiveJwtDecoder reactiveJwtDecoder(@Value("${AUTH_JWT_SECRET:change-me-in-env-please-change-me-in-env}") String secret) {
-    SecretKey secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    SecretKey secretKey = JwtSecretKeySupport.resolveSecretKey(secret);
     return NimbusReactiveJwtDecoder.withSecretKey(secretKey).build();
   }
 }

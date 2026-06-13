@@ -21,7 +21,9 @@ chmod 600 .env
 | `AUTH_SERVICE_URL` | Auth on `auth-platform` (e.g. `http://auth-service:8081`) |
 | `AUTH_JWT_SECRET` | **Same as [auth-service](https://github.com/mc44/auth-service/blob/main/deploy/.env.example)** |
 | `BLOG_TENANT_ID` | Login tenant; must exist in auth |
-| `NEXT_PUBLIC_GATEWAY_URL` | Public gateway URL for frontend build |
+| `NEXT_PUBLIC_GATEWAY_URL` | Public gateway URL for browser and CI frontend build |
+| `GATEWAY_INTERNAL_URL` | SSR fetches from frontend container (e.g. `http://gateway:8080` on VPS) |
+| `GATEWAY_CORS_ORIGINS` | Comma-separated browser origins (e.g. `https://blog.mfajardo.com`) |
 | `CLOUDINARY_*` | Optional; omit for in-memory media dev |
 | `KAFKA_ENABLED` | `false` by default; see [docs/kafka.md](../docs/kafka.md) |
 
@@ -77,6 +79,23 @@ docker compose --env-file .env ps
 ```
 
 Login and UI smoke test: root [README.md](../README.md) §4.
+
+**Auth + JWT smoke test** (after gateway image with JWT fix is deployed):
+
+```bash
+GATEWAY_URL="${NEXT_PUBLIC_GATEWAY_URL:-https://blog.mfajardo.com}"
+TOKEN=$(curl -s -X POST "$GATEWAY_URL/auth/login" \
+  -H 'Content-Type: application/json' \
+  -d '{"tenantId":"blog-cms","email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}' \
+  | jq -r .accessToken)
+
+curl -s -o /dev/null -w "create post: %{http_code}\n" -X POST "$GATEWAY_URL/blog/posts" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"smoke","content":"test","status":"DRAFT","categoryIds":[],"tagIds":[],"mediaRefs":[]}'
+```
+
+Expect **201** (or **400** validation), not **401**. After a code change, push to `main`, wait for publish workflow, then on the VPS: `cd 0-deploy && ./scripts/deploy.sh`.
 
 ## Ports
 

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { SiteBrandTitle } from "@/components/site-brand-title";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { clearAccessToken, getAccessToken } from "@/lib/auth";
+import { logout } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
 
 export function SiteHeader() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -13,8 +14,8 @@ export function SiteHeader() {
     setLoggedIn(!!getAccessToken());
   }, []);
 
-  function logout() {
-    clearAccessToken();
+  async function onLogout() {
+    await logout();
     setLoggedIn(false);
     window.location.href = "/";
   }
@@ -43,7 +44,7 @@ export function SiteHeader() {
             </>
           )}
           {loggedIn ? (
-            <button type="button" onClick={logout} className="hover:text-foreground">
+            <button type="button" onClick={onLogout} className="hover:text-foreground">
               Log out
             </button>
           ) : (

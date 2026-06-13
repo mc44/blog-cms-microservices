@@ -1,10 +1,19 @@
-import { authHeaders, getAccessToken } from "./auth";
-
-const GATEWAY =
-  process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+} from "./auth";
 
 const TENANT_ID =
   process.env.NEXT_PUBLIC_TENANT_ID ?? "blog-cms";
+
+function gatewayBaseUrl(): string {
+  if (typeof window === "undefined" && process.env.GATEWAY_INTERNAL_URL) {
+    return process.env.GATEWAY_INTERNAL_URL;
+  }
+  return process.env.NEXT_PUBLIC_GATEWAY_URL ?? "http://localhost:8080";
+}
 
 export type PostStatus = "DRAFT" | "PUBLISHED";
 
@@ -39,20 +48,93 @@ function postsUrl(params?: { status?: PostStatus; authorId?: string }) {
   if (params?.status) search.set("status", params.status);
   if (params?.authorId) search.set("authorId", params.authorId);
   const q = search.toString();
-  return `${GATEWAY}/blog/posts${q ? `?${q}` : ""}`;
+  return `${gatewayBaseUrl()}/blog/posts${q ? `?${q}` : ""}`;
+}
+
+let refreshInFlight: Promise<string> | null = null;
+
+export async function refreshAccessToken(): Promise<string> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error("Session expired");
+  }
+
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const res = await fetch(`${gatewayBaseUrl()}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) {
+        clearTokens();
+        throw new Error("Session expired");
+      }
+      const tokens: AuthTokenResponse = await res.json();
+      setTokens(tokens.accessToken, tokens.refreshToken);
+      return tokens.accessToken;
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+
+  return refreshInFlight;
+}
+
+async function authorizedFetch(
+  url: string,
+  init: RequestInit = {}
+): Promise<Response> {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error("Login required");
+  }
+
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+
+  let res = await fetch(url, { ...init, headers });
+  if (res.status !== 401) {
+    return res;
+  }
+
+  const newToken = await refreshAccessToken();
+  headers.set("Authorization", `Bearer ${newToken}`);
+  res = await fetch(url, { ...init, headers });
+  if (res.status === 401) {
+    clearTokens();
+    throw new Error("Session expired");
+  }
+  return res;
 }
 
 export async function login(
   email: string,
   password: string
 ): Promise<AuthTokenResponse> {
-  const res = await fetch(`${GATEWAY}/auth/login`, {
+  const res = await fetch(`${gatewayBaseUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tenantId: TENANT_ID, email, password }),
   });
   if (!res.ok) throw new Error("Login failed");
   return res.json();
+}
+
+export async function logout(): Promise<void> {
+  const refreshToken = getRefreshToken();
+  if (refreshToken) {
+    try {
+      await fetch(`${gatewayBaseUrl()}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch {
+      // Best effort; clear local session regardless.
+    }
+  }
+  clearTokens();
 }
 
 export async function listPosts(options?: {
@@ -65,7 +147,9 @@ export async function listPosts(options?: {
 }
 
 export async function getPost(id: string): Promise<Post> {
-  const res = await fetch(`${GATEWAY}/blog/posts/${id}`, { cache: "no-store" });
+  const res = await fetch(`${gatewayBaseUrl()}/blog/posts/${id}`, {
+    cache: "no-store",
+  });
   if (!res.ok) throw new Error("Post not found");
   return res.json();
 }
@@ -76,12 +160,9 @@ export async function createPost(body: {
   status: PostStatus;
   mediaRefs?: { cloudinaryPublicId: string; secureUrl?: string }[];
 }): Promise<Post> {
-  const res = await fetch(`${GATEWAY}/blog/posts`, {
+  const res = await authorizedFetch(`${gatewayBaseUrl()}/blog/posts`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: body.title,
       content: body.content,
@@ -107,12 +188,9 @@ export async function updatePost(
     mediaRefs?: { cloudinaryPublicId: string; secureUrl?: string }[];
   }
 ): Promise<Post> {
-  const res = await fetch(`${GATEWAY}/blog/posts/${id}`, {
+  const res = await authorizedFetch(`${gatewayBaseUrl()}/blog/posts/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       title: body.title,
       content: body.content,
@@ -127,22 +205,17 @@ export async function updatePost(
 }
 
 export async function deletePost(id: string): Promise<void> {
-  const res = await fetch(`${GATEWAY}/blog/posts/${id}`, {
+  const res = await authorizedFetch(`${gatewayBaseUrl()}/blog/posts/${id}`, {
     method: "DELETE",
-    headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to delete post");
 }
 
 export async function uploadMedia(file: File): Promise<MediaAsset> {
-  const token = getAccessToken();
-  if (!token) throw new Error("Login required to upload media");
-
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${GATEWAY}/media/upload`, {
+  const res = await authorizedFetch(`${gatewayBaseUrl()}/media/upload`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
   if (!res.ok) throw new Error("Upload failed");
