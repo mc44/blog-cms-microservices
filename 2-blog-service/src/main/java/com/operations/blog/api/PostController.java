@@ -46,8 +46,9 @@ public class PostController {
   @GetMapping("/{id}")
   public PostResponse get(
       @PathVariable String id,
-      @RequestHeader(value = "X-Tenant-Id", required = false) String tenantId) {
-    return postService.getById(id, tenantId);
+      @RequestHeader(value = "X-Tenant-Id", required = false) String tenantId,
+      @RequestHeader(value = "X-User-Id", required = false) String userId) {
+    return postService.getById(id, tenantId, userId);
   }
 
   @GetMapping
@@ -64,8 +65,9 @@ public class PostController {
       @Valid @RequestBody UpdatePostRequest request,
       @RequestHeader(value = "X-Tenant-Id", required = false) String tenantId,
       @RequestHeader(value = "X-User-Id", required = false) String userId,
-      @RequestHeader(value = CorrelationIdFilter.HEADER, required = false) String correlationId) {
-    return postService.update(id, request, tenantId, userId, correlationId);
+      @RequestHeader(value = CorrelationIdFilter.HEADER, required = false) String correlationId,
+      @RequestParam(defaultValue = "false") boolean autosave) {
+    return postService.update(id, request, tenantId, userId, correlationId, autosave);
   }
 
   @PatchMapping("/{id}/status")

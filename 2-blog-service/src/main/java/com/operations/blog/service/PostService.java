@@ -74,11 +74,14 @@ public class PostService {
     return saved;
   }
 
-  public PostResponse getById(String id, String tenantId) {
+  public PostResponse getById(String id, String tenantId, String userId) {
     String tenant = resolveTenant(tenantId);
-    return postRepository.findByIdAndTenantId(id, tenant)
-        .map(this::toResponse)
+    PostDocument post = postRepository.findByIdAndTenantId(id, tenant)
         .orElseThrow(() -> new BlogException("Post not found"));
+    if (post.getStatus() == PostStatus.DRAFT && !isAuthor(post, userId)) {
+      throw new BlogException("Post not found");
+    }
+    return toResponse(post);
   }
 
   public List<PostResponse> list(String tenantId, PostStatus status, String authorId) {
@@ -102,11 +105,15 @@ public class PostService {
       UpdatePostRequest request,
       String tenantId,
       String authorId,
-      String correlationId) {
+      String correlationId,
+      boolean autosave) {
     String tenant = resolveTenant(tenantId);
     PostDocument post = postRepository.findByIdAndTenantId(id, tenant)
         .orElseThrow(() -> new BlogException("Post not found"));
-    snapshotRevision(post);
+    assertAuthor(post, authorId);
+    if (!autosave) {
+      snapshotRevision(post);
+    }
     validateMediaRefs(request.mediaRefs());
     PostStatus previousStatus = post.getStatus();
     post.setTitle(request.title());
@@ -129,9 +136,11 @@ public class PostService {
       post.setPublishedAt(Instant.now());
     }
     PostResponse saved = toResponse(postRepository.save(post));
-    emitPostEvent("post.updated", tenant, authorId, saved.id(), correlationId, saved);
-    if (previousStatus != PostStatus.PUBLISHED && post.getStatus() == PostStatus.PUBLISHED) {
-      emitPostEvent("post.published", tenant, authorId, saved.id(), correlationId, saved);
+    if (!autosave) {
+      emitPostEvent("post.updated", tenant, authorId, saved.id(), correlationId, saved);
+      if (previousStatus != PostStatus.PUBLISHED && post.getStatus() == PostStatus.PUBLISHED) {
+        emitPostEvent("post.published", tenant, authorId, saved.id(), correlationId, saved);
+      }
     }
     return saved;
   }
@@ -142,6 +151,7 @@ public class PostService {
     String tenant = resolveTenant(tenantId);
     PostDocument post = postRepository.findByIdAndTenantId(id, tenant)
         .orElseThrow(() -> new BlogException("Post not found"));
+    assertAuthor(post, authorId);
     snapshotRevision(post);
     PostStatus previousStatus = post.getStatus();
     post.setStatus(request.status());
@@ -163,6 +173,7 @@ public class PostService {
     String tenant = resolveTenant(tenantId);
     PostDocument post = postRepository.findByIdAndTenantId(id, tenant)
         .orElseThrow(() -> new BlogException("Post not found"));
+    assertAuthor(post, authorId);
     postRepository.delete(post);
     emitPostEvent("post.deleted", tenant, authorId, id, correlationId, Map.of("title", post.getTitle()));
   }
@@ -194,6 +205,16 @@ public class PostService {
       return headerTenantId;
     }
     return configuredTenantId;
+  }
+
+  private void assertAuthor(PostDocument post, String userId) {
+    if (userId == null || userId.isBlank() || !userId.equals(post.getAuthorId())) {
+      throw new BlogException("Post not found");
+    }
+  }
+
+  private boolean isAuthor(PostDocument post, String userId) {
+    return userId != null && !userId.isBlank() && userId.equals(post.getAuthorId());
   }
 
   private void snapshotRevision(PostDocument post) {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TableSkeleton } from "@/components/skeletons/table-skeleton";
 import { deletePost, listPosts, type Post } from "@/lib/api";
 import { getAccessToken } from "@/lib/auth";
 import { formatPostDate } from "@/lib/format";
@@ -23,6 +24,7 @@ function StatusBadge({ status }: { status: Post["status"] }) {
 export default function MyPostsPage() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,11 +35,13 @@ export default function MyPostsPage() {
     const authorId = getUserIdFromToken();
     if (!authorId) {
       setError("Could not read user id from token.");
+      setLoading(false);
       return;
     }
-    listPosts({ authorId })
+    listPosts({ authorId, cache: "no-store" })
       .then(setPosts)
-      .catch(() => setError("Failed to load your posts."));
+      .catch(() => setError("Failed to load your posts."))
+      .finally(() => setLoading(false));
   }, [router]);
 
   async function handleDelete(id: string) {
@@ -65,7 +69,8 @@ export default function MyPostsPage() {
         </Link>
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
-      {posts.length === 0 && !error && (
+      {loading && <TableSkeleton rows={5} />}
+      {!loading && posts.length === 0 && !error && (
         <p className="rounded-lg border border-dashed border-border px-6 py-10 text-center text-muted-foreground">
           No posts yet.{" "}
           <Link href="/posts/new" className="text-primary hover:underline">
@@ -73,6 +78,7 @@ export default function MyPostsPage() {
           </Link>
         </p>
       )}
+      {!loading && posts.length > 0 && (
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-border bg-muted/50 text-muted-foreground">
@@ -119,6 +125,7 @@ export default function MyPostsPage() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

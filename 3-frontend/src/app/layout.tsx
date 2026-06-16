@@ -3,6 +3,7 @@ import { League_Spartan } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { UnsavedChangesProvider } from "@/context/unsaved-changes-context";
 import { siteDescription, siteName } from "@/lib/site";
 import "./globals.css";
 
@@ -31,11 +32,13 @@ export default function RootLayout({
           storageKey="blog-cms-theme"
           disableTransitionOnChange
         >
-          <SiteHeader />
-          <main className="mx-auto min-h-[calc(100vh-12rem)] max-w-6xl px-4 py-10">
-            {children}
-          </main>
-          <SiteFooter />
+          <UnsavedChangesProvider>
+            <SiteHeader />
+            <main className="mx-auto min-h-[calc(100vh-12rem)] max-w-6xl px-4 py-10">
+              {children}
+            </main>
+            <SiteFooter />
+          </UnsavedChangesProvider>
         </ThemeProvider>
       </body>
     </html>

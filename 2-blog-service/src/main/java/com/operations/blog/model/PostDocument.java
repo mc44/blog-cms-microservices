@@ -4,10 +4,20 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "posts")
+@CompoundIndexes({
+    @CompoundIndex(
+        name = "tenant_status_updated",
+        def = "{ 'tenantId': 1, 'status': 1, 'updatedAt': -1 }"),
+    @CompoundIndex(
+        name = "tenant_author_updated",
+        def = "{ 'tenantId': 1, 'authorId': 1, 'updatedAt': -1 }")
+})
 public class PostDocument {
   @Id
   private String id;

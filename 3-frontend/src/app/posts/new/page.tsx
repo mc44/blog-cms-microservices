@@ -17,6 +17,7 @@ export default function NewPostPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">New post</h1>
       <PostEditor
+        postId={null}
         initial={{ title: "", content: "", status: "DRAFT", mediaRefs: [] }}
         submitLabel="Save post"
         onSubmit={async (values) => {

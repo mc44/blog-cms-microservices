@@ -4,6 +4,7 @@ import {
   getRefreshToken,
   setTokens,
 } from "./auth";
+import { fetchJson } from "./fetch";
 
 const TENANT_ID =
   process.env.NEXT_PUBLIC_TENANT_ID ?? "blog-cms";
@@ -140,14 +141,36 @@ export async function logout(): Promise<void> {
 export async function listPosts(options?: {
   status?: PostStatus;
   authorId?: string;
+  cache?: RequestCache;
+  revalidate?: number | false;
 }): Promise<Post[]> {
-  const res = await fetch(postsUrl(options), { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load posts");
-  return res.json();
+  const useCache = options?.cache !== "no-store";
+
+  return fetchJson<Post[]>(
+    postsUrl({ status: options?.status, authorId: options?.authorId }),
+    {
+      label: "listPosts",
+      next: useCache ? { revalidate: options?.revalidate ?? 30 } : undefined,
+      cache: options?.cache ?? (useCache ? "force-cache" : "no-store"),
+    }
+  );
 }
 
-export async function getPost(id: string): Promise<Post> {
-  const res = await fetch(`${gatewayBaseUrl()}/blog/posts/${id}`, {
+export async function getPost(
+  id: string,
+  options?: { cache?: RequestCache; revalidate?: number | false }
+): Promise<Post> {
+  const useCache = options?.cache !== "no-store";
+
+  return fetchJson<Post>(`${gatewayBaseUrl()}/blog/posts/${id}`, {
+    label: "getPost",
+    next: useCache ? { revalidate: options?.revalidate ?? 60 } : undefined,
+    cache: options?.cache ?? (useCache ? "force-cache" : "no-store"),
+  });
+}
+
+export async function getPostAuthorized(id: string): Promise<Post> {
+  const res = await authorizedFetch(`${gatewayBaseUrl()}/blog/posts/${id}`, {
     cache: "no-store",
   });
   if (!res.ok) throw new Error("Post not found");
@@ -186,9 +209,11 @@ export async function updatePost(
     content: string;
     status: PostStatus;
     mediaRefs?: { cloudinaryPublicId: string; secureUrl?: string }[];
-  }
+  },
+  options?: { autosave?: boolean }
 ): Promise<Post> {
-  const res = await authorizedFetch(`${gatewayBaseUrl()}/blog/posts/${id}`, {
+  const query = options?.autosave ? "?autosave=true" : "";
+  const res = await authorizedFetch(`${gatewayBaseUrl()}/blog/posts/${id}${query}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
